@@ -11,6 +11,7 @@ import Programs from "./pages/Programs";
 import Companies from "./pages/Companies";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/Loginpage";
+import { ShootingStars } from "./components/ui/shooting-stars";
 
 const queryClient = new QueryClient();
 
