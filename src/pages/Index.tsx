@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, Code2, Users, Rocket, Sun, Moon, LogOut } from "lucide-react";
@@ -14,9 +14,55 @@ const Index = () => {
   const [dark, setDark] = useState(true);
   const [accent, setAccent] = useState<Accent>("neon");
 
+  // Prevent multiple script insertions across re-renders / route changes
+  const botpressLoadedRef = useRef(false);
+
   useEffect(() => {
     const loggedUser = localStorage.getItem("username");
     if (loggedUser) setUser(loggedUser);
+  }, []);
+
+  useEffect(() => {
+    // Only run in browser and only once
+    if (typeof window === "undefined") return;
+    if (botpressLoadedRef.current) return;
+
+    // IDs chosen to make script detection idempotent
+    const INJECT_ID = "bp-webchat-inject";
+    const CUSTOM_ID = "bp-custom-20251101201231";
+
+    const addScript = (id: string, src: string, defer = false) => {
+      if (document.getElementById(id)) return document.getElementById(id) as HTMLScriptElement;
+      const s = document.createElement("script");
+      s.id = id;
+      s.src = src;
+      if (defer) s.defer = true;
+      s.async = true;
+      document.body.appendChild(s);
+      return s;
+    };
+
+    try {
+      // Add the official botpress webchat injector
+      addScript(INJECT_ID, "https://cdn.botpress.cloud/webchat/v3.3/inject.js");
+
+      // Add the instance-specific script (deferred)
+      addScript(CUSTOM_ID, "https://files.bpcontent.cloud/2025/11/01/20/20251101201231-4LQ29P7C.js", true);
+
+      botpressLoadedRef.current = true;
+    } catch (err) {
+      // Non-fatal; log so devs can inspect in console
+      // eslint-disable-next-line no-console
+      console.error("Failed to load Botpress scripts:", err);
+    }
+
+    // Optional cleanup if you navigate away and want to remove scripts (commented out by default)
+    // return () => {
+    //   const inj = document.getElementById(INJECT_ID);
+    //   const cus = document.getElementById(CUSTOM_ID);
+    //   if (inj) inj.remove();
+    //   if (cus) cus.remove();
+    // };
   }, []);
 
   const handleLogout = () => {
@@ -37,7 +83,7 @@ const Index = () => {
   const fadeUp = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
   return (
-    <div className={`${dark ? "dark" : ""}`} aria-label="TechPath main layout">
+    <div className={`${dark ? "dark" : ""}`} aria-label="SyncVerse main layout">
       {/* ✅ Futuristic starry background */}
       <div className="fixed inset-0 z-0 bg-black overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.1)_0%,rgba(0,0,0,0)_80%)]" />
@@ -85,7 +131,7 @@ const Index = () => {
                 <Code2 className="h-5 w-5 text-white" />
               </div>
               <div>
-                <div className="text-lg font-extrabold leading-tight">TechPath</div>
+                <div className="text-lg font-extrabold leading-tight">SyncVerse</div>
                 <div className="text-xs text-white/50 -mt-1">Learn — Build — Ship</div>
               </div>
             </div>
@@ -97,10 +143,6 @@ const Index = () => {
               <Link to="/programs" className="text-sm text-white/70 hover:text-white transition">Programs</Link>
               <Link to="/companies" className="text-sm text-white/70 hover:text-white transition">Companies</Link>
             </div>
-
-            
-
-            
 
             {user ? (
               <div className="flex items-center gap-3">
@@ -133,7 +175,9 @@ const Index = () => {
 
                 <motion.h1 variants={fadeUp} className="text-5xl font-extrabold leading-tight">
                   {user ? (
-                    <>Hello <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00E5FF] to-[#8B5CF6]">{user}</span>, welcome back 👋</>
+                    <>
+                      Hello <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00E5FF] to-[#8B5CF6]">{user}</span>, welcome back 👋
+                    </>
                   ) : (
                     <>
                       Master Tech with <br />
@@ -212,7 +256,7 @@ const Index = () => {
         <section className="pb-20" aria-label="Features">
           <div className="container mx-auto px-6">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={{ show: { transition: { staggerChildren: 0.12 } } }}>
-              <motion.h2 variants={fadeUp} className="text-3xl font-bold mb-4">Why TechPath works</motion.h2>
+              <motion.h2 variants={fadeUp} className="text-3xl font-bold mb-4">Why SyncVerse works</motion.h2>
               <motion.p variants={fadeUp} className="text-white/70 max-w-3xl mb-8">
                 A unified experience — curated roadmaps, collaborative learning, and placement-driven programs.
               </motion.p>
@@ -276,7 +320,7 @@ const Index = () => {
             </div>
 
             <div className="mt-6 text-xs text-white/50 text-center">
-              © {new Date().getFullYear()} TechPath · Crafted with ❤️ for learners
+              © {new Date().getFullYear()} SyncVerse · Crafted with ❤️ for learners
             </div>
           </div>
         </footer>

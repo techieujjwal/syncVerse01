@@ -6,15 +6,52 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle } from "lucide-react";
 import {
   ArrowLeft,
   Sparkles,
   Loader2,
   ChevronDown,
   ChevronUp,
+  Users,
+  Mail,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+const dummyPeers = [
+  { id: 1, name: "Priya Sharma", city: "Mumbai", email: "priya.sharma@email.com", lastActive: "5 days ago", topic: "machine learning" },
+  { id: 2, name: "Rohan Mehta", city: "Delhi", email: "rohan.mehta@email.com", lastActive: "2 days ago", topic: "data science" },
+  { id: 3, name: "Ananya Verma", city: "Bangalore", email: "ananya.verma@email.com", lastActive: "1 day ago", topic: "machine learning" },
+  { id: 4, name: "Karan Patel", city: "Pune", email: "karan.patel@email.com", lastActive: "3 hours ago", topic: "web development" },
+  { id: 5, name: "Neha Gupta", city: "Chennai", email: "neha.gupta@email.com", lastActive: "6 hours ago", topic: "cybersecurity" },
+  { id: 6, name: "Aarav Singh", city: "Hyderabad", email: "aarav.singh@email.com", lastActive: "2 days ago", topic: "blockchain" },
+  { id: 7, name: "Ishita Nair", city: "Kochi", email: "ishita.nair@email.com", lastActive: "8 hours ago", topic: "UI/UX design" },
+  { id: 8, name: "Rahul Jain", city: "Indore", email: "rahul.jain@email.com", lastActive: "10 days ago", topic: "android development" },
+  { id: 9, name: "Tanvi Deshmukh", city: "Nagpur", email: "tanvi.deshmukh@email.com", lastActive: "1 day ago", topic: "cloud computing" },
+  { id: 10, name: "Manav Kapoor", city: "Lucknow", email: "manav.kapoor@email.com", lastActive: "12 hours ago", topic: "artificial intelligence" },
+  { id: 11, name: "Diya Chatterjee", city: "Kolkata", email: "diya.chatterjee@email.com", lastActive: "4 days ago", topic: "data analytics" },
+  { id: 12, name: "Harsh Raj", city: "Patna", email: "harsh.raj@email.com", lastActive: "3 hours ago", topic: "web development" },
+  { id: 13, name: "Simran Kaur", city: "Amritsar", email: "simran.kaur@email.com", lastActive: "7 days ago", topic: "machine learning" },
+  { id: 14, name: "Aditya Joshi", city: "Jaipur", email: "aditya.joshi@email.com", lastActive: "6 hours ago", topic: "blockchain" },
+  { id: 15, name: "Ritika Das", city: "Guwahati", email: "ritika.das@email.com", lastActive: "9 days ago", topic: "AI ethics" },
+  { id: 16, name: "Sarthak Bansal", city: "Noida", email: "sarthak.bansal@email.com", lastActive: "2 days ago", topic: "cloud computing" },
+  { id: 17, name: "Aditi Rao", city: "Surat", email: "aditi.rao@email.com", lastActive: "1 hour ago", topic: "frontend development" },
+  { id: 18, name: "Vivek Mishra", city: "Varanasi", email: "vivek.mishra@email.com", lastActive: "4 hours ago", topic: "backend development" },
+  { id: 19, name: "Kavya Pillai", city: "Thiruvananthapuram", email: "kavya.pillai@email.com", lastActive: "3 days ago", topic: "mobile app development" },
+  { id: 20, name: "Tanishq Sinha", city: "Ranchi", email: "tanishq.sinha@email.com", lastActive: "9 hours ago", topic: "IoT" },
+  { id: 21, name: "Pooja Yadav", city: "Bhopal", email: "pooja.yadav@email.com", lastActive: "11 hours ago", topic: "data science" },
+  { id: 22, name: "Rajeev Menon", city: "Coimbatore", email: "rajeev.menon@email.com", lastActive: "5 days ago", topic: "AI/ML" },
+  { id: 23, name: "Sneha Tiwari", city: "Kanpur", email: "sneha.tiwari@email.com", lastActive: "8 days ago", topic: "blockchain" },
+  { id: 24, name: "Anshul Gaur", city: "Ghaziabad", email: "anshul.gaur@email.com", lastActive: "3 hours ago", topic: "full stack development" },
+  { id: 25, name: "Mitali Borkar", city: "Nashik", email: "mitali.borkar@email.com", lastActive: "2 days ago", topic: "AI research" },
+  { id: 26, name: "Yash Chauhan", city: "Vadodara", email: "yash.chauhan@email.com", lastActive: "7 hours ago", topic: "cloud computing" },
+  { id: 27, name: "Divya Pandey", city: "Agra", email: "divya.pandey@email.com", lastActive: "5 days ago", topic: "web development" },
+  { id: 28, name: "Naman Arora", city: "Chandigarh", email: "naman.arora@email.com", lastActive: "3 hours ago", topic: "data engineering" },
+  { id: 29, name: "Sia Kapoor", city: "Delhi", email: "sia.kapoor@email.com", lastActive: "1 day ago", topic: "cloud security" },
+  { id: 30, name: "Aryan Khanna", city: "Gurgaon", email: "aryan.khanna@email.com", lastActive: "2 hours ago", topic: "DevOps" },
+];
 
 const RoadmapGenerator = () => {
   const [topic, setTopic] = useState("");
@@ -23,7 +60,31 @@ const RoadmapGenerator = () => {
   const [parsedRoadmap, setParsedRoadmap] = useState([]);
   const [progress, setProgress] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [matchedPeers, setMatchedPeers] = useState([]);
   const { toast } = useToast();
+
+  // Normalize function for better matching
+  const normalize = (text) =>
+    text.toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
+
+  useEffect(() => {
+    if (!topic.trim()) {
+      setMatchedPeers([]);
+      return;
+    }
+
+    const search = normalize(topic);
+    const peers = dummyPeers.filter((peer) => {
+      const peerTopic = normalize(peer.topic);
+      return (
+        peerTopic.includes(search) ||
+        search.includes(peerTopic) ||
+        peerTopic.split(" ").some((word) => search.includes(word))
+      );
+    });
+
+    setMatchedPeers(peers);
+  }, [topic]);
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("roadmapProgress"));
@@ -84,7 +145,6 @@ const RoadmapGenerator = () => {
     }
   };
 
-  // Improved week parser that captures detailed weekly info
   const parseWeeks = (text) => {
     const lines = text.split("\n");
     const weeks = [];
@@ -186,6 +246,67 @@ const RoadmapGenerator = () => {
           </div>
         </Card>
 
+        {/* 🔹 Peers Section */}
+        {matchedPeers.length > 0 && (
+          <Card className="p-8 border-border bg-card mb-8 animate-fade-in">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-primary">
+              <Users className="h-5 w-5" /> Peers learning "{topic}"
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {matchedPeers.map((peer) => (
+                <Card key={peer.id} className="p-4 border border-border/40 bg-background/60">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-lg">{peer.name}</p>
+                      <p className="text-sm text-muted-foreground">{peer.city}</p>
+                      <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1">
+                        <Mail className="h-3 w-3" /> {peer.email}
+                      </div>
+                    </div>
+                    <Button
+  size="sm"
+  variant="outline"
+  onClick={(e) => {
+    // 1️⃣ Open Botpress chatbot
+    if (window.botpressWebChat) {
+      window.botpressWebChat.sendEvent({ type: "show" });
+    }
+
+    // 2️⃣ Show tick animation on button click
+    const tick = document.createElement("div");
+    tick.innerHTML = `
+      <div class="fixed inset-0 flex items-center justify-center z-[9999] bg-black/30">
+        <div class="animate-[pop_0.8s_ease-out_forwards] flex flex-col items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" 
+               class="w-20 h-20 text-green-400 drop-shadow-xl" 
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      </div>
+      <style>
+        @keyframes pop {
+          0% { transform: scale(0); opacity: 0; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(1); opacity: 0; }
+        }
+      </style>
+    `;
+    document.body.appendChild(tick);
+
+    // remove after animation completes
+    setTimeout(() => tick.remove(), 1500);
+  }}
+>
+  💬 Connect
+</Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Progress Tracker */}
         {parsedRoadmap.length > 0 && (
           <Card
@@ -234,7 +355,7 @@ const RoadmapGenerator = () => {
                           }
                         />
                         <Button
-                          variant={week.completed ? "success" : "outline"}
+                          variant={week.completed ? "default" : "outline"}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleWeekCompletion(index);
@@ -256,4 +377,3 @@ const RoadmapGenerator = () => {
 };
 
 export default RoadmapGenerator;
-  
