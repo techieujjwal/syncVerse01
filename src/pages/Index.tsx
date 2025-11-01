@@ -2,10 +2,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Code2, Users, Rocket, Sun, Moon, LogOut } from "lucide-react";
+import { ArrowRight, Code2, Users, Rocket, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShootingStars } from "@/components/ui/shooting-stars"; // ✅ Background stars
+import { ShootingStars } from "@/components/ui/shooting-stars";
 
 type Accent = "neon" | "elegant" | "vibe";
 
@@ -13,8 +13,6 @@ const Index = () => {
   const [user, setUser] = useState<string | null>(null);
   const [dark, setDark] = useState(true);
   const [accent, setAccent] = useState<Accent>("neon");
-
-  // Prevent multiple script insertions across re-renders / route changes
   const botpressLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -23,13 +21,8 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    // Only run in browser and only once
     if (typeof window === "undefined") return;
     if (botpressLoadedRef.current) return;
-
-    // IDs chosen to make script detection idempotent
-    const INJECT_ID = "bp-webchat-inject";
-    const CUSTOM_ID = "bp-custom-20251101201231";
 
     const addScript = (id: string, src: string, defer = false) => {
       if (document.getElementById(id)) return document.getElementById(id) as HTMLScriptElement;
@@ -43,26 +36,12 @@ const Index = () => {
     };
 
     try {
-      // Add the official botpress webchat injector
-      addScript(INJECT_ID, "https://cdn.botpress.cloud/webchat/v3.3/inject.js");
-
-      // Add the instance-specific script (deferred)
-      addScript(CUSTOM_ID, "https://files.bpcontent.cloud/2025/11/01/20/20251101201231-4LQ29P7C.js", true);
-
+      addScript("bp-webchat-inject", "https://cdn.botpress.cloud/webchat/v3.3/inject.js");
+      addScript("bp-custom-20251101201231", "https://files.bpcontent.cloud/2025/11/01/20/20251101201231-4LQ29P7C.js", true);
       botpressLoadedRef.current = true;
     } catch (err) {
-      // Non-fatal; log so devs can inspect in console
-      // eslint-disable-next-line no-console
       console.error("Failed to load Botpress scripts:", err);
     }
-
-    // Optional cleanup if you navigate away and want to remove scripts (commented out by default)
-    // return () => {
-    //   const inj = document.getElementById(INJECT_ID);
-    //   const cus = document.getElementById(CUSTOM_ID);
-    //   if (inj) inj.remove();
-    //   if (cus) cus.remove();
-    // };
   }, []);
 
   const handleLogout = () => {
@@ -73,9 +52,9 @@ const Index = () => {
   const community = useMemo(
     () => [
       { name: "Rohit", initials: "R", color: "from-pink-400 to-red-500" },
-      { name: "ujjwal", initials: "U", color: "from-purple-400 to-indigo-500" },
-      { name: "taran", initials: "T", color: "from-green-300 to-teal-400" },
-      { name: "udhav", initials: "U", color: "from-yellow-300 to-orange-400" },
+      { name: "Ujjwal", initials: "U", color: "from-purple-400 to-indigo-500" },
+      { name: "Taran", initials: "T", color: "from-green-300 to-teal-400" },
+      { name: "Udhav", initials: "U", color: "from-yellow-300 to-orange-400" },
     ],
     []
   );
@@ -83,35 +62,14 @@ const Index = () => {
   const fadeUp = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
   return (
-    <div className={`${dark ? "dark" : ""}`} aria-label="SyncVerse main layout">
-      {/* ✅ Futuristic starry background */}
+    <div className={`${dark ? "dark" : ""}`}>
+      {/* === BACKGROUND === */}
       <div className="fixed inset-0 z-0 bg-black overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.1)_0%,rgba(0,0,0,0)_80%)]" />
         <div className="absolute inset-0 stars" />
-        <ShootingStars
-          starColor="#9E00FF"
-          trailColor="#2EB9DF"
-          minSpeed={15}
-          maxSpeed={35}
-          minDelay={1000}
-          maxDelay={3000}
-        />
-        <ShootingStars
-          starColor="#FF0099"
-          trailColor="#FFB800"
-          minSpeed={10}
-          maxSpeed={25}
-          minDelay={2000}
-          maxDelay={4000}
-        />
-        <ShootingStars
-          starColor="#00FF9E"
-          trailColor="#00B8FF"
-          minSpeed={20}
-          maxSpeed={40}
-          minDelay={1500}
-          maxDelay={3500}
-        />
+        <ShootingStars starColor="#9E00FF" trailColor="#2EB9DF" minSpeed={15} maxSpeed={35} minDelay={1000} maxDelay={3000} />
+        <ShootingStars starColor="#FF0099" trailColor="#FFB800" minSpeed={10} maxSpeed={25} minDelay={2000} maxDelay={4000} />
+        <ShootingStars starColor="#00FF9E" trailColor="#00B8FF" minSpeed={20} maxSpeed={40} minDelay={1500} maxDelay={3500} />
       </div>
 
       <main className="relative z-10 min-h-screen text-slate-100 overflow-hidden">
@@ -119,19 +77,11 @@ const Index = () => {
         <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[94%] md:w-[85%] lg:w-[75%] bg-white/6 dark:bg-black/40 border border-white/6 backdrop-blur-md rounded-xl px-4 py-3 shadow-lg flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div
-                className={`p-2 rounded-md bg-gradient-to-br ${
-                  accent === "neon"
-                    ? "from-[#00E5FF] to-[#6C33FF]"
-                    : accent === "elegant"
-                    ? "from-slate-200 to-slate-400"
-                    : "from-pink-400 to-amber-400"
-                }`}
-              >
+              <div className="p-2 rounded-md bg-gradient-to-br from-[#00E5FF] to-[#6C33FF]">
                 <Code2 className="h-5 w-5 text-white" />
               </div>
               <div>
-                <div className="text-lg font-extrabold leading-tight">SyncVerse</div>
+                <div className="text-lg font-extrabold">SyncVerse</div>
                 <div className="text-xs text-white/50 -mt-1">Learn — Build — Ship</div>
               </div>
             </div>
@@ -153,19 +103,16 @@ const Index = () => {
               </div>
             ) : (
               <Link to="/login">
-                <Button size="sm" className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white">
-                  Get Started
-                </Button>
+                <Button size="sm" className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white">Get Started</Button>
               </Link>
             )}
           </div>
         </nav>
 
         {/* === HERO === */}
-        <header className="pt-28 pb-12" aria-label="Hero section">
+        <header className="pt-28 pb-12">
           <div className="container mx-auto px-6">
             <div className="grid lg:grid-cols-2 gap-10 items-center">
-              {/* LEFT */}
               <motion.div initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
                 <motion.div variants={fadeUp} className="mb-4">
                   <span className="inline-flex items-center gap-3 rounded-full px-4 py-1 text-sm font-medium bg-white/6">
@@ -176,7 +123,11 @@ const Index = () => {
                 <motion.h1 variants={fadeUp} className="text-5xl font-extrabold leading-tight">
                   {user ? (
                     <>
-                      Hello <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00E5FF] to-[#8B5CF6]">{user}</span>, welcome back 👋
+                      Hello{" "}
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00E5FF] to-[#8B5CF6]">
+                        {user}
+                      </span>
+                      , welcome back 👋
                     </>
                   ) : (
                     <>
@@ -189,7 +140,8 @@ const Index = () => {
                 </motion.h1>
 
                 <motion.p variants={fadeUp} className="mt-6 text-lg text-white/70 max-w-2xl">
-                  From curated roadmaps to hands-on programs and a buzzing community — everything designed to get you from zero to product-ready.
+                  From curated roadmaps to hands-on programs and a buzzing community — everything designed to get you from
+                  zero to product-ready.
                 </motion.p>
 
                 <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3 items-center">
@@ -207,12 +159,13 @@ const Index = () => {
                   </Link>
 
                   <div className="ml-2 text-sm text-white/60">
-                    <span className="font-medium">Avg time:</span> 3–6 months · <span className="font-medium">Commitment:</span> 6–10 hrs/week
+                    <span className="font-medium">Avg time:</span> 3–6 months ·{" "}
+                    <span className="font-medium">Commitment:</span> 6–10 hrs/week
                   </div>
                 </motion.div>
               </motion.div>
 
-              {/* RIGHT */}
+              {/* RIGHT PANEL */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
                 <Card className="p-6 md:p-8 border border-white/8 backdrop-blur-md bg-black/30">
                   <div className="flex items-center justify-between mb-4">
@@ -225,7 +178,7 @@ const Index = () => {
 
                   <div className="flex items-center gap-4 mb-4">
                     <div className="flex -space-x-3">
-                      {community.map((c, i) => (
+                      {community.map((c) => (
                         <motion.div key={c.name} whileHover={{ scale: 1.12, y: -6 }} className="w-10 h-10 rounded-full ring-2 ring-white/8 flex items-center justify-center">
                           <div className={`w-full h-full rounded-full bg-gradient-to-br ${c.color} flex items-center justify-center text-black/80`}>
                             {c.initials}
@@ -253,7 +206,7 @@ const Index = () => {
         </header>
 
         {/* === FEATURES === */}
-        <section className="pb-20" aria-label="Features">
+        <section className="pb-20">
           <div className="container mx-auto px-6">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={{ show: { transition: { staggerChildren: 0.12 } } }}>
               <motion.h2 variants={fadeUp} className="text-3xl font-bold mb-4">Why SyncVerse works</motion.h2>
@@ -282,8 +235,14 @@ const Index = () => {
                     details: "Placement kits, interview practice, and project reviews to help you land roles.",
                   },
                 ].map((f, i) => (
-                  <motion.div key={i} variants={fadeUp}>
-                    <Card className="p-6 hover:scale-[1.02] transition-transform border border-white/6 bg-white/5">
+                  <motion.div
+                    key={i}
+                    variants={fadeUp}
+                    className="group relative p-6 rounded-2xl bg-white/5 border border-white/10 transition-all duration-500"
+                  >
+                    <div className="absolute inset-0 rounded-2xl pointer-events-none border border-transparent group-hover:border-purple-500 group-hover:shadow-[0_0_30px_#A855F7] transition-all duration-500"></div>
+
+                    <div className="relative z-10">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="p-3 rounded-lg bg-white/6">{f.icon}</div>
                         <div>
@@ -292,7 +251,7 @@ const Index = () => {
                         </div>
                       </div>
                       <div className="mt-2 text-sm text-white/60">{f.details}</div>
-                    </Card>
+                    </div>
                   </motion.div>
                 ))}
               </div>
@@ -300,7 +259,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* === FOOTER CTA === */}
+        {/* === FOOTER === */}
         <footer className="py-12">
           <div className="container mx-auto px-6">
             <div className="bg-white/4 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -326,7 +285,6 @@ const Index = () => {
         </footer>
       </main>
 
-      {/* Twinkle animation CSS */}
       <style jsx>{`
         .stars {
           background-image: radial-gradient(2px 2px at 20px 30px, #fff, transparent),
