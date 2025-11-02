@@ -9,6 +9,15 @@ import { ShootingStars } from "@/components/ui/shooting-stars";
 
 type Accent = "neon" | "elegant" | "vibe";
 
+/**
+ * Make TypeScript aware of the botpress global (safe any)
+ */
+declare global {
+  interface Window {
+    botpressWebChat?: any;
+  }
+}
+
 const Index = () => {
   const [user, setUser] = useState<string | null>(null);
   const [dark, setDark] = useState(true);
@@ -21,27 +30,88 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
+    // Client-only + idempotent
     if (typeof window === "undefined") return;
     if (botpressLoadedRef.current) return;
 
-    const addScript = (id: string, src: string, defer = false) => {
-      if (document.getElementById(id)) return document.getElementById(id) as HTMLScriptElement;
+    const INJECT_ID = "bp-webchat-inject";
+    const CUSTOM_ID = "bp-custom-20251101201231";
+    const INJECT_SRC = "https://cdn.botpress.cloud/webchat/v3.3/inject.js";
+    const CUSTOM_SRC = "https://files.bpcontent.cloud/2025/11/01/20/20251101201231-4LQ29P7C.js";
+
+    const appendScriptToHead = (id: string, src: string, defer = false) => {
+      const existing = document.getElementById(id) as HTMLScriptElement | null;
+      if (existing) return existing;
       const s = document.createElement("script");
       s.id = id;
       s.src = src;
-      if (defer) s.defer = true;
       s.async = true;
-      document.body.appendChild(s);
+      if (defer) s.defer = true;
+      document.head.appendChild(s);
       return s;
     };
 
     try {
-      addScript("bp-webchat-inject", "https://cdn.botpress.cloud/webchat/v3.3/inject.js");
-      addScript("bp-custom-20251101201231", "https://files.bpcontent.cloud/2025/11/01/20/20251101201231-4LQ29P7C.js", true);
+      // 1) Add injector to head
+      const inject = appendScriptToHead(INJECT_ID, INJECT_SRC, false);
+
+      // Safety: if inject script already present and window.botpressWebChat exists, skip waiting
+      const onInjectorReady = () => {
+        try {
+          // 2) Once injector is ready, append the instance script
+          appendScriptToHead(CUSTOM_ID, CUSTOM_SRC, true);
+
+          // 3) Optional: auto-show chat after short delay (only for testing/confirmation)
+          setTimeout(() => {
+            try {
+              if (window.botpressWebChat && typeof window.botpressWebChat.sendEvent === "function") {
+                window.botpressWebChat.sendEvent({ type: "show" });
+              }
+            } catch (err) {
+              // no-op
+            }
+          }, 2500);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error("Failed to append Botpress instance script:", err);
+        }
+      };
+
+      // If injector already loaded and botpress available, use immediately
+      if (window.botpressWebChat) {
+        onInjectorReady();
+      } else if (inject) {
+        // Listen to onload; also add a fallback timeout in case onload doesn't fire
+        let fired = false;
+        inject.addEventListener("load", () => {
+          fired = true;
+          onInjectorReady();
+        });
+
+        // Fallback: if load doesn't fire in X ms, attempt anyway
+        const fallbackTimeout = setTimeout(() => {
+          if (!fired) {
+            onInjectorReady();
+          }
+        }, 6000);
+
+        // No cleanup function necessary for single-page load, but guard memory:
+        // (we won't remove scripts on unmount because we want chat to persist across routes)
+        // Clear fallback if unmounted quickly
+        const cleanup = () => clearTimeout(fallbackTimeout);
+        // call cleanup on unmount
+        return cleanup;
+      } else {
+        // If unable to append inject script (very unlikely), still try instance after delay
+        setTimeout(onInjectorReady, 3000);
+      }
+
       botpressLoadedRef.current = true;
     } catch (err) {
-      console.error("Failed to load Botpress scripts:", err);
+      // eslint-disable-next-line no-console
+      console.error("Botpress integration error:", err);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = () => {
