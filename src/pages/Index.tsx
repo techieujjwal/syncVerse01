@@ -197,7 +197,7 @@ const Index = () => {
                   <Link to="/roadmap-generator">
                     <Button
                       size="lg"
-                      className="group flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black"
+                      className="group flex items-center gap-3 px-6 py-3  text-white"
                     >
                       <span>Generate My Roadmap</span>
                       <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
