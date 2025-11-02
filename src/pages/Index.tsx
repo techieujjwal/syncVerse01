@@ -38,7 +38,7 @@ const Index = () => {
   const fadeUp = { hidden: { opacity: 0, y: 12 }, show: { opacity: 5, y: 0 } };
 
   return (
-    <div className={`${dark ? "dark" : ""}`} aria-label="TechPath main layout">
+    <div className={`${dark ? "dark" : ""}`} aria-label="SyncVerse main layout">
       {/* ✅ Futuristic starry background */}
       <div className="fixed inset-0 z-0 bg-black overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.1)_0%,rgba(0,0,0,0)_80%)]" />
@@ -87,7 +87,7 @@ const Index = () => {
               </div>
               <div>
                 <div className="text-lg font-extrabold leading-tight">
-                  TechPath
+                  SyncVerse
                 </div>
                 <div className="text-xs text-white/50 -mt-1">
                   Learn — Build — Ship
@@ -300,7 +300,7 @@ const Index = () => {
                 variants={fadeUp}
                 className="text-3xl font-bold mb-4"
               >
-                Why TechPath works
+                Why SyncVerse works
               </motion.h2>
               <motion.p
                 variants={fadeUp}
