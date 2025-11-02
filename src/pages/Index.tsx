@@ -196,12 +196,26 @@ const Index = () => {
                 >
                   <Link to="/roadmap-generator">
                     <Button
-                      size="lg"
-                      className="group flex items-center gap-3 px-6 py-3  text-white"
-                    >
-                      <span>Generate My Roadmap</span>
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </Button>
+  size="lg"
+  className="group relative flex items-center gap-3 px-6 py-3 
+  text-white bg-black border border-white/10 
+  rounded-lg overflow-hidden transition-all duration-300
+  hover:border-purple-500 hover:shadow-[0_0_25px_rgba(168,85,247,0.6)]"
+>
+  {/* Glow overlay on hover */}
+  <span
+    className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 
+    bg-gradient-to-r from-purple-600/40 via-transparent to-purple-600/40 
+    blur-lg transition duration-500"
+  ></span>
+
+  {/* Button Text */}
+  <span className="relative z-10">Generate My Roadmap</span>
+
+  {/* Icon */}
+  <ArrowRight className="relative z-10 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+</Button>
+
                   </Link>
 
                   <Link to="/programs">
