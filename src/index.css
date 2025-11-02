@@ -40,11 +40,14 @@ All colors MUST be HSL.
 
     --gradient-primary: linear-gradient(135deg, hsl(263 70% 60%), hsl(220 80% 65%));
     --gradient-glow: linear-gradient(180deg, hsl(263 70% 60% / 0.15), transparent);
-    
+
     --shadow-glow: 0 0 40px hsl(263 70% 60% / 0.3);
     --shadow-card: 0 4px 24px hsl(240 10% 3.9% / 0.4);
-    
+
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .theme {
+    --animate-background-position-spin: background-position-spin 3000ms infinite alternate;
   }
 }
 
@@ -63,15 +66,15 @@ All colors MUST be HSL.
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-blue-400 to-cyan-400;
   }
-  
+
   .glow-text {
     text-shadow: 0 0 20px hsl(var(--primary) / 0.5);
   }
-  
+
   .card-glow {
     box-shadow: var(--shadow-card), var(--shadow-glow);
   }
-  
+
   .hover-lift {
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
   }
@@ -86,5 +89,19 @@ All colors MUST be HSL.
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* ---break---
+*/
+
+@theme inline {
+  @keyframes background-position-spin {
+  0% {
+    backgroundPosition: top center;
+    }
+  100% {
+    backgroundPosition: bottom center;
+    }
   }
 }
