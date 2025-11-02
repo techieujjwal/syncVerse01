@@ -7,6 +7,8 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ShootingStars } from "@/components/ui/shooting-stars";
 
+
+
 type Accent = "neon" | "elegant" | "vibe";
 
 /**
@@ -225,6 +227,13 @@ const Index = () => {
                   <Link to="/programs">
                     <Button size="lg" variant="outline" className="px-6 py-3 border-white/10 text-white/90">
                       View Programs
+                    </Button>
+                  </Link>
+                  <h3>Or</h3>
+
+                   <Link to="/experts">
+                    <Button size="lg" variant="outline" className="px-6 py-3 border-white/10 text-white/90 bg-red-500">
+                     An Expert ?
                     </Button>
                   </Link>
 

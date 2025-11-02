@@ -12,6 +12,7 @@ import Companies from "./pages/Companies";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/Loginpage";
 import { ShootingStars } from "./components/ui/shooting-stars";
+import ExpertPage from "./pages/Experts";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => {
             <Route path="/programs" element={<Programs />} />
             <Route path="/companies" element={<Companies />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/experts" element={<ExpertPage />} />
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
