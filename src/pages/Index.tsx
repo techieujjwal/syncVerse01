@@ -195,13 +195,13 @@ const Index = () => {
                   className="mt-8 flex flex-wrap gap-3 items-center"
                 >
                   <Link to="/roadmap-generator">
-                     <Button
-                      size="lg"
-                      className="group flex items-center gap-3 px-6 py-3  text-white"
-                    >
-                      <span>Generate My Roadmap</span>
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </Button>
+                    <Button
+  size="lg"
+  className="group flex items-center gap-3 px-6 py-3 text-white bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 transition-all duration-300"
+>
+  <span>Generate My Roadmap</span>
+  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+</Button>
                    
 
 
