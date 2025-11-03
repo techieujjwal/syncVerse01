@@ -199,7 +199,7 @@ const Index = () => {
                       <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00E5FF] to-[#8B5CF6]">
                         {user}
                       </span>
-                      , welcome back 👋
+                      , SIGN IN
                     </>
                   ) : (
                     <>
@@ -358,7 +358,8 @@ const Index = () => {
             </div>
 
             <div className="mt-6 text-xs text-white/50 text-center">
-              © {new Date().getFullYear()} SyncVerse · Crafted with ❤️ for learners
+              © {new Date().getFullYear()} SyncVerse <br />
+               Crafted By Hexember Devs with ❤️ for learners
             </div>
           </div>
         </footer>

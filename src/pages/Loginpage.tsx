@@ -13,9 +13,9 @@ const LoginPage = () => {
 
   // 3 demo users
   const demoUsers = [
-    { email: "veer@techpath.com", password: "123456" },
-    { email: "rakesh@email.com", password: "654321" },
-    { email: "tanish@techpath.com", password: "111111" },
+    { email: "Veer@techpath.com", password: "123456" },
+    { email: "Rakesh@email.com", password: "654321" },
+    { email: "Tanish@techpath.com", password: "111111" },
   ];
 
   const handleLogin = (e: React.FormEvent) => {
@@ -32,21 +32,21 @@ const LoginPage = () => {
       setError("");
       navigate("/"); // go back to Index
     } else {
-      setError("❌ Invalid credentials. Try one of the demo accounts below.");
+      setError("Wrong Email Or Passoword");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-background to-muted">
       <Card className="w-full max-w-md p-8 border border-border bg-card shadow-lg hover-lift">
-        <h2 className="text-3xl font-bold text-center mb-6">Welcome Back 👋</h2>
+        <h2 className="text-3xl font-bold text-center mb-6">Sign Up</h2>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="veer@techpath.com"
+              placeholder="Enter Your Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -57,7 +57,7 @@ const LoginPage = () => {
             <Input
               id="password"
               type="password"
-              placeholder="••••••"
+              placeholder="Enter Your Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
