@@ -14,7 +14,7 @@ const LoginPage = () => {
   // 3 demo users
   const demoUsers = [
     { email: "Veer@techpath.com", password: "123456" },
-    { email: "ujjwalshukla291@gmail.com", password: "654321" },
+    { email: "Rakesh@email.com", password: "654321" },
     { email: "Tanish@techpath.com", password: "111111" },
   ];
 
