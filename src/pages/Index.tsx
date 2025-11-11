@@ -175,7 +175,7 @@ const Index = () => {
               </div>
             ) : (
               <Link to="/login">
-                <Button size="sm" className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white">Get Started</Button>
+                <Button size="sm" className="bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-white">LOGIN</Button>
               </Link>
             )}
           </div>
