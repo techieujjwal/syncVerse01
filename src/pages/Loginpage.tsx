@@ -30,6 +30,7 @@ const DEMO_USERS: LocalUser[] = [
   { email: "Veer@techpath.com", password: "123456", name: "Veer" },
   { email: "Rakesh@email.com", password: "654321", name: "Rakesh" },
   { email: "Tanish@techpath.com", password: "111111", name: "Tanish" },
+  { email : "hacker123@gmail.com",password:"111111", name :"ujjwal"},
 ];
 
 const LoginPage: React.FC = () => {
