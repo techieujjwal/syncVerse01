@@ -11,8 +11,12 @@ import Programs from "./pages/Programs";
 import Companies from "./pages/Companies";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/Loginpage";
-import { ShootingStars } from "./components/ui/shooting-stars";
-import ExpertPage from "./pages/Experts";
+import ExpertPage from "./pages/experts";
+import Premium from "./pages/Premium"; // ✅ Premium page import
+import AiHelp from "./pages/aihelp";
+// ...
+
+
 
 const queryClient = new QueryClient();
 
@@ -22,6 +26,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -31,6 +36,9 @@ const App = () => {
             <Route path="/companies" element={<Companies />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/experts" element={<ExpertPage />} />
+            <Route path="/aihelp" element={<AiHelp />} />
+            <Route path="/premium" element={<Premium />} />
+
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -41,4 +49,3 @@ const App = () => {
 };
 
 export default App;
- 
