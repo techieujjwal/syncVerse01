@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ import {
   Mail,
   ChevronDown,
   ChevronUp,
-  Copy, // 👈 added
+  Copy,
 } from "lucide-react";
 import { ShootingStars } from "@/components/ui/shooting-stars";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,6 +117,9 @@ const Premium = () => {
 
   const [peerSearch, setPeerSearch] = useState("");
   const [matchedPeers, setMatchedPeers] = useState(premiumPeers);
+
+  // 🔍 refs for each week to auto-scroll
+  const weekRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Load saved premium progress (separate from free)
   useEffect(() => {
@@ -216,10 +219,40 @@ const Premium = () => {
     }
   };
 
+  // ✅ Mark done + auto-scroll to next week
   const toggleWeekCompletion = (index: number) => {
-    setWeeks((prev) =>
-      prev.map((w, i) => (i === index ? { ...w, completed: !w.completed } : w))
-    );
+    setWeeks((prev) => {
+      const wasCompletedBefore = prev[index]?.completed;
+      const updated = prev.map((w, i) =>
+        i === index ? { ...w, completed: !w.completed } : w
+      );
+
+      // Only auto-scroll when user marks it from incomplete -> completed
+      if (!wasCompletedBefore) {
+        // 1) Try to find next incomplete after this index
+        let targetIndex = updated.findIndex(
+          (w, i) => i > index && !w.completed
+        );
+        // 2) If none after, jump to first incomplete anywhere
+        if (targetIndex === -1) {
+          targetIndex = updated.findIndex((w) => !w.completed);
+        }
+
+        if (targetIndex !== -1) {
+          setTimeout(() => {
+            const el = weekRefs.current[targetIndex];
+            if (el) {
+              el.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }
+          }, 0);
+        }
+      }
+
+      return updated;
+    });
   };
 
   const handleProjectLinkChange = (index: number, value: string) => {
@@ -262,10 +295,10 @@ const Premium = () => {
     if (forWeek?.week) params.set("week", forWeek.week);
     if (forWeek?.title) params.set("title", forWeek.title);
 
-    // also send roadmap context as state
     const roadmapContext =
       forWeek?.details?.join("\n") ||
       `Week ${forWeek?.week || ""}: ${forWeek?.title || ""}`;
+
     navigate(`/aihelp?${params.toString()}`, {
       state: {
         topic,
@@ -290,14 +323,16 @@ const Premium = () => {
       .trim();
 
     try {
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      if (
+        navigator.clipboard &&
+        typeof navigator.clipboard.writeText === "function"
+      ) {
         await navigator.clipboard.writeText(text);
         toast({
           title: "Copied ✅",
           description: `Week ${week.week} roadmap copied to clipboard.`,
         });
       } else {
-        // Fallback
         const textarea = document.createElement("textarea");
         textarea.value = text;
         document.body.appendChild(textarea);
@@ -313,7 +348,8 @@ const Premium = () => {
       console.error("Copy failed:", err);
       toast({
         title: "Copy failed",
-        description: "Could not copy this week. Try manually selecting the text.",
+        description:
+          "Could not copy this week. Try manually selecting the text.",
         variant: "destructive",
       });
     }
@@ -390,7 +426,7 @@ const Premium = () => {
             >
               <motion.div
                 variants={fadeUp}
-                className="flex items.center gap-2 mb-3"
+                className="flex items-center gap-2 mb-3"
               >
                 <Sparkles className="h-5 w-5 text-violet-300" />
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-violet-200/80">
@@ -422,7 +458,7 @@ const Premium = () => {
                 variants={fadeUp}
                 className="flex flex-wrap gap-3 items-center mb-8"
               >
-                <Button className="px-6 py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text.black">
+                <Button className="px-6 py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-black">
                   Get Premium Access
                 </Button>
                 <p className="text-xs text-white/60">
@@ -563,12 +599,12 @@ const Premium = () => {
                       <h3 className="font-semibold text-lg">
                         Vibe coding with friends
                       </h3>
-                      <p className="text-xs text.white/60">
+                      <p className="text-xs text-white/60">
                         Squad-based Synced Roadmaps
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm text.white/70">
+                  <p className="text-sm text-white/70">
                     Form squads, share the same roadmap, and see each
                     other&apos;s completion %. Push each other on days you feel
                     lazy and celebrate when everyone ships.
@@ -588,7 +624,7 @@ const Premium = () => {
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm text.white/70">
+                  <p className="text-sm text-white/70">
                     Every week, you get focused tasks and mini-projects built
                     from your roadmap. Less watching, more doing — and a growing
                     portfolio by default.
@@ -603,12 +639,12 @@ const Premium = () => {
                       <h3 className="font-semibold text-lg">
                         Weekly record & smart roadmap
                       </h3>
-                      <p className="text-xs text.white/60">
+                      <p className="text-xs text-white/60">
                         Adapts to your reality
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm text.white/70">
+                  <p className="text-sm text-white/70">
                     At the end of each week, Premium records what you actually
                     did. Next week&apos;s roadmap updates — slowing down, adding
                     revision, or pushing harder based on your real reach.
@@ -772,6 +808,7 @@ const Premium = () => {
                           {weeks.map((week, i) => (
                             <div
                               key={i}
+                              ref={(el) => (weekRefs.current[i] = el)}
                               className="border border-white/10 rounded-lg p-3 space-y-2"
                             >
                               <div className="flex items-center justify-between gap-2">
@@ -806,7 +843,9 @@ const Premium = () => {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    variant={week.completed ? "default" : "outline"}
+                                    variant={
+                                      week.completed ? "default" : "outline"
+                                    }
                                     className="h-7 text-[11px] px-2"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -879,8 +918,8 @@ const Premium = () => {
                     <div className="mt-2 space-y-2 max-h-[230px] overflow-y-auto">
                       {!matchedPeers.length && (
                         <p className="text-xs text-white/50">
-                          No matches yet. In full Premium, this connects to
-                          real user profiles and squads.
+                          No matches yet. In full Premium, this connects to real
+                          user profiles and squads.
                         </p>
                       )}
 
