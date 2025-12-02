@@ -273,7 +273,8 @@ const RoadmapGenerator = () => {
     if (parsedTopics.length > 0) {
       localStorage.setItem("basicRoadmapProgress", JSON.stringify(parsedTopics));
       const completed = parsedTopics.filter((t) => t.completed).length;
-      setProgress((completed / parsedTopics.length) * 100);
+      const percent = parsedTopics.length ? Math.round((completed / parsedTopics.length) * 100) : 0;
+      setProgress(percent);
     } else {
       setProgress(0);
     }
@@ -433,14 +434,7 @@ const RoadmapGenerator = () => {
                       <p className="text-sm text-muted-foreground">{peer.city}</p>
                       <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1"><Mail className="h-3 w-3" /> {peer.email}</div>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => {
-                      if ((window as any).botpressWebChat) (window as any).botpressWebChat.sendEvent({ type: "show" });
-                      // tiny tick animation
-                      const tick = document.createElement("div");
-                      tick.innerHTML = `<div class="fixed inset-0 flex items-center justify-center z-[9999] bg-black/30"><div class="animate-[pop_0.8s_ease-out_forwards] flex flex-col items-center"><svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 text-green-400 drop-shadow-xl" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></div></div><style>@keyframes pop {0% { transform: scale(0); opacity: 0;}50% { transform: scale(1.2); opacity: 1;}100% { transform: scale(1); opacity: 0;}}</style>`;
-                      document.body.appendChild(tick);
-                      setTimeout(() => tick.remove(), 1200);
-                    }}>💬 Connect</Button>
+
                   </div>
                 </Card>
               ))}
@@ -456,6 +450,21 @@ const RoadmapGenerator = () => {
                 <p className="text-sm text-muted-foreground">Concise list of topics and what to focus on for each.</p>
               </div>
               {expanded ? <ChevronUp className="h-6 w-6 text-muted-foreground" /> : <ChevronDown className="h-6 w-6 text-muted-foreground" />}
+            </div>
+
+            {/* Progress bar + percentage */}
+            <div className="mt-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1" aria-hidden>
+                  <Progress value={progress} aria-label="Roadmap completion progress" />
+                </div>
+                <div className="ml-4 text-sm font-medium">
+                  {progress}%
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                {parsedTopics.filter((t) => t.completed).length} of {parsedTopics.length} completed
+              </div>
             </div>
 
             {expanded && (
