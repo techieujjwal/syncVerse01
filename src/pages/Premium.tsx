@@ -257,7 +257,8 @@ const Premium = () => {
   const weekRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("premiumRoadmapProgress");
+    // Prefer the new shared key "premiumWeeks" so other components (Index) read the same source.
+    const saved = localStorage.getItem("premiumWeeks") ?? localStorage.getItem("premiumRoadmapProgress");
     if (saved) {
       try {
         setWeeks(JSON.parse(saved));
@@ -267,10 +268,24 @@ const Premium = () => {
 
   useEffect(() => {
     if (weeks.length > 0) {
-      localStorage.setItem("premiumRoadmapProgress", JSON.stringify(weeks));
+      // Persist under the canonical shared key so other tabs/components can read it.
+      try {
+        localStorage.setItem("premiumWeeks", JSON.stringify(weeks));
+        // Notify same-tab listeners that premium weeks updated
+        window.dispatchEvent(new Event("premiumWeeksUpdated"));
+      } catch (err) {
+        console.warn("Failed to persist premiumWeeks:", err);
+      }
+
       const completed = weeks.filter((w) => w.completed).length;
       setProgress((completed / weeks.length) * 100);
-    } else setProgress(0);
+    } else {
+      // Clear the key if weeks became empty (optional)
+      try {
+        localStorage.removeItem("premiumWeeks");
+      } catch {}
+      setProgress(0);
+    }
   }, [weeks]);
 
   useEffect(() => {
@@ -443,6 +458,7 @@ const Premium = () => {
         youtube: Array.from(new Set((w.youtube || []).map(String))).slice(0, 8),
       }));
 
+      // setWeeks will trigger the saving useEffect which persists and notifies listeners
       setWeeks(cleaned);
 
       toast({ title: "Premium roadmap ready 🚀", description: "An enriched roadmap (repos, projects, playlists) has been generated." });
@@ -458,6 +474,15 @@ const Premium = () => {
     setWeeks((prev) => {
       const wasCompletedBefore = prev[index]?.completed;
       const updated = prev.map((w, i) => (i === index ? { ...w, completed: !w.completed } : w));
+
+      // Persist immediately so other components see the change without waiting for next render
+      try {
+        localStorage.setItem("premiumWeeks", JSON.stringify(updated));
+        window.dispatchEvent(new Event("premiumWeeksUpdated"));
+      } catch (err) {
+        console.warn("Failed to persist premiumWeeks on toggle:", err);
+      }
+
       if (!wasCompletedBefore) {
         let targetIndex = updated.findIndex((w, i) => i > index && !w.completed);
         if (targetIndex === -1) targetIndex = updated.findIndex((w) => !w.completed);
@@ -473,10 +498,28 @@ const Premium = () => {
   };
 
   const handleProjectLinkChange = (index: number, value: string) =>
-    setWeeks((prev) => prev.map((w, i) => (i === index ? { ...w, projectLink: value } : w)));
+    setWeeks((prev) => {
+      const updated = prev.map((w, i) => (i === index ? { ...w, projectLink: value } : w));
+      try {
+        localStorage.setItem("premiumWeeks", JSON.stringify(updated));
+        window.dispatchEvent(new Event("premiumWeeksUpdated"));
+      } catch (err) {
+        console.warn("Failed to persist premiumWeeks on projectLink change:", err);
+      }
+      return updated;
+    });
 
   const handleReflectionChange = (index: number, value: string) =>
-    setWeeks((prev) => prev.map((w, i) => (i === index ? { ...w, reflection: value } : w)));
+    setWeeks((prev) => {
+      const updated = prev.map((w, i) => (i === index ? { ...w, reflection: value } : w));
+      try {
+        localStorage.setItem("premiumWeeks", JSON.stringify(updated));
+        window.dispatchEvent(new Event("premiumWeeksUpdated"));
+      } catch (err) {
+        console.warn("Failed to persist premiumWeeks on reflection change:", err);
+      }
+      return updated;
+    });
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !isLoading) {
@@ -1043,7 +1086,7 @@ const Premium = () => {
                             💬 Ask AI to plan session
                           </Button>
                         </Card>
-                      ))}
+                      ))} 
                     </div>
 
                     <p className="text-[11px] text-white/50">
