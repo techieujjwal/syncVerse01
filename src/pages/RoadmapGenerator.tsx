@@ -9,18 +9,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles, Loader2, ChevronDown, ChevronUp, Users, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
-/**
- * RoadmapGenerator.tsx (basic roadmap)
- * Purpose: generate a *basic* roadmap that lists topics to study + short description per topic.
- *
- * Behavior summary:
- * - UI/layout kept same as your previous component.
- * - Generates a list of topics (title, shortDescription, optional subtopics[]).
- * - Parses flexible backend responses (JSON or plain text).
- * - Enriches common frontend topics (HTML/TML -> HTML, Semantic HTML, CSS, JS, React) with concise descriptions.
- * - Stores progress in localStorage under "basicRoadmapProgress".
- */
+import { getCachedRoadmap, saveRoadmapToCache } from "@/lib/roadmapCache";
 
 const dummyPeers = [
   { id: 1, name: "Priya Sharma", city: "Mumbai", email: "priya.sharma@email.com", lastActive: "5 days ago", topic: "machine learning" },
@@ -36,10 +25,10 @@ const dummyPeers = [
 ];
 
 type TopicItem = {
-  id: string; // internal id
+  id: string;
   title: string;
   shortDescription: string;
-  subtopics?: string[]; // optional one-line subtopics
+  subtopics?: string[];
   completed?: boolean;
   projectLink?: string;
 };
@@ -48,11 +37,9 @@ const normalizeString = (s?: string) =>
   (s || "").toString().trim();
 
 const normalizeTopicInput = (raw: string) => {
-  // fix common typos like "TML" -> "HTML" and normalize
   return raw.replace(/\btml\b/gi, "html").toLowerCase();
 };
 
-// Curated enrichments for basic frontend topics (keeps descriptions short)
 const CURATED_BASIC: Record<string, { shortDescription: string; subtopics: string[] }> = {
   html: {
     shortDescription: "Structure of web pages: tags, elements, semantic meaning and accessibility basics.",
@@ -76,13 +63,10 @@ const CURATED_BASIC: Record<string, { shortDescription: string; subtopics: strin
   },
 };
 
-// Parser: convert backend response (string or object) into TopicItem[]
 const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
   if (!maybeTextOrJson) return [];
 
-  // If it's already an object/array with topics, try to map
   if (typeof maybeTextOrJson === "object") {
-    // If shape: { topics: [{ title, description, subtopics }] }
     if (Array.isArray(maybeTextOrJson.topics)) {
       return maybeTextOrJson.topics.map((t: any, idx: number) => ({
         id: `${Date.now()}-${idx}`,
@@ -94,23 +78,20 @@ const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
       }));
     }
 
-    // If shape: { weeks: [...] } (some premium responses) - convert weeks -> topics (pick title & details)
     if (Array.isArray(maybeTextOrJson.weeks)) {
       return maybeTextOrJson.weeks.map((w: any, idx: number) => ({
         id: `${Date.now()}-${idx}`,
         title: normalizeString(w.title) || `Week ${w.week ?? idx + 1}`,
-        shortDescription: (Array.isArray(w.details) ? w.details.join(" • ") : normalizeString(w.details)) || "",
+        shortDescription: (Array.isArray(w.details) ? w.details.join(" · ") : normalizeString(w.details)) || "",
         subtopics: Array.isArray(w.subtopics) ? w.subtopics.map(String) : [],
         completed: !!w.completed,
         projectLink: w.projectLink ?? "",
       }));
     }
 
-    // If it's an array of strings or objects
     if (Array.isArray(maybeTextOrJson)) {
       return maybeTextOrJson.map((it: any, idx: number) => {
         if (typeof it === "string") {
-          // plain line -> parse "Topic - description" or "Topic: description"
           const m = it.split(/[-:—]/).map((s) => s.trim());
           const title = m[0] || `Topic ${idx + 1}`;
           const desc = m.slice(1).join(" - ") || "";
@@ -127,36 +108,25 @@ const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
       });
     }
 
-    // fallback: try to extract content/message fields
     const maybeStr = String(maybeTextOrJson.content ?? maybeTextOrJson.text ?? JSON.stringify(maybeTextOrJson));
-    // fall through to text parsing below
     return parseTopics(maybeStr);
   }
 
-  // At this point, we have a string: parse line-by-line for "Topic - description" patterns
   const text = String(maybeTextOrJson).trim();
 
-  // If JSON-like string, try parse
   if (/^[\[{]/.test(text) || /"topics"\s*:/.test(text)) {
     try {
       const parsed = JSON.parse(text);
       return parseTopics(parsed);
     } catch {
-      // continue to plaintext parsing
     }
   }
 
-  // Plain text parsing:
-  // Accept patterns like:
-  // - "1. HTML - Structure and semantic elements"
-  // - "- HTML: Structure and semantic elements"
-  // - "HTML — Structure and semantic elements"
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
   const items: TopicItem[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // try to match "Title - description"
     const m = line.match(/^(?:\d+\.\s*)?([A-Za-z0-9 &+.#-]{2,60})\s*[:\-—]\s*(.+)$/);
     if (m) {
       items.push({
@@ -170,7 +140,6 @@ const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
       continue;
     }
 
-    // If line looks like "Title" and next line is an indented description
     if (i + 1 < lines.length && lines[i + 1].match(/^[\-\*\•]\s+/)) {
       const title = line;
       const descBullets: string[] = [];
@@ -182,7 +151,7 @@ const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
       items.push({
         id: `${Date.now()}-${i}`,
         title: title,
-        shortDescription: descBullets.join(" • "),
+        shortDescription: descBullets.join(" · "),
         subtopics: [],
         completed: false,
         projectLink: "",
@@ -191,7 +160,6 @@ const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
       continue;
     }
 
-    // fallback: line as simple title with empty description
     items.push({
       id: `${Date.now()}-${i}`,
       title: line,
@@ -205,18 +173,14 @@ const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
   return items;
 };
 
-// Enrich parsed topics with curated descriptions for common keywords (only if missing or short)
 const enrichParsedTopics = (queryTopic: string, items: TopicItem[]) => {
   const norm = normalizeTopicInput(queryTopic || "");
-  // for each curated keyword, if query includes it OR item title includes it, apply enrichment
   const keys = Object.keys(CURATED_BASIC);
 
   return items.map((it) => {
     const titleNorm = it.title.toLowerCase();
-    // choose which key to apply: first match in either query or title
     const matchedKey = keys.find((k) => norm.includes(k) || titleNorm.includes(k));
     if (!matchedKey) {
-      // if item has no description and query matches a key, try fallback
       const fallbackKey = keys.find((k) => norm.includes(k));
       if (fallbackKey && (!it.shortDescription || it.shortDescription.length < 10)) {
         return {
@@ -229,9 +193,7 @@ const enrichParsedTopics = (queryTopic: string, items: TopicItem[]) => {
     }
 
     const curated = CURATED_BASIC[matchedKey];
-    // If no shortDescription, add curated shortDescription
     const shortDescription = it.shortDescription && it.shortDescription.length > 12 ? it.shortDescription : curated.shortDescription;
-    // If no subtopics present, attach a compact selection
     const subtopics = (it.subtopics && it.subtopics.length > 0) ? it.subtopics : curated.subtopics.slice(0, 3);
     return { ...it, shortDescription, subtopics };
   });
@@ -261,12 +223,11 @@ const RoadmapGenerator = () => {
     setMatchedPeers(peers);
   }, [topic]);
 
-  // load saved basic roadmap progress
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("basicRoadmapProgress") || "null");
       if (Array.isArray(saved)) setParsedTopics(saved);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -290,7 +251,18 @@ const RoadmapGenerator = () => {
     setParsedTopics([]);
 
     try {
-      // call existing supabase function - basic mode (premium false)
+      const cached = await getCachedRoadmap(topic, false);
+      if (cached) {
+        let items = parseTopics(cached);
+        if (items.length > 0) {
+          const enriched = enrichParsedTopics(topic || currentKnowledge || "", items);
+          setParsedTopics(enriched);
+          toast({ title: "Roadmap loaded", description: "Found a cached roadmap for this topic." });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("generate-roadmap", {
         body: { topic, currentKnowledge, premium: false },
       });
@@ -299,16 +271,13 @@ const RoadmapGenerator = () => {
 
       let maybe: any = data;
 
-      // If backend returned stringified JSON
       if (typeof maybe === "string") {
         try {
           maybe = JSON.parse(maybe);
         } catch {
-          // keep string
         }
       }
 
-      // Try to find candidate fields that might contain topics
       const candidates = [
         maybe?.topics,
         maybe?.roadmap,
@@ -327,24 +296,21 @@ const RoadmapGenerator = () => {
           break;
         }
         if (typeof c === "object") {
-          // object shapes we can use directly
           if (Array.isArray(c.topics) || Array.isArray(c.weeks) || Array.isArray(c)) {
             chosen = c;
             break;
           }
-          // extract nested fields
           if (c.content || c.text || c.choices) {
             chosen = c;
             break;
           }
-          // fallback: if object large enough, use it
           try {
             const len = JSON.stringify(c).length;
             if (len > 40) {
               chosen = c;
               break;
             }
-          } catch {}
+          } catch { }
         }
       }
 
@@ -356,21 +322,18 @@ const RoadmapGenerator = () => {
         throw new Error("No usable roadmap returned by backend.");
       }
 
-      // parse into topic items
       let items = parseTopics(chosen);
-      // if backend returned empty list, fallback to synthesize a few topics from the input
       if (!items || items.length === 0) {
-        // split topic by comma and create items
         const parts = (topic || "").split(/[,|\/&]/).map((p) => p.trim()).filter(Boolean);
         items = parts.length ? parts.map((p, i) => ({ id: `${Date.now()}-${i}`, title: p, shortDescription: "", subtopics: [], completed: false, projectLink: "" })) : [{ id: `${Date.now()}-0`, title: topic, shortDescription: "", subtopics: [], completed: false, projectLink: "" }];
       }
 
-      // enrich items with curated basic content where it makes sense
       const enriched = enrichParsedTopics(topic || currentKnowledge || "", items);
 
       setParsedTopics(enriched);
+      await saveRoadmapToCache(topic, false, enriched);
 
-      toast({ title: "Roadmap ready", description: "Basic topics generated (concise) — see below." });
+      toast({ title: "Roadmap ready", description: "Basic topics generated — see below." });
     } catch (err: any) {
       console.error("Error generating basic roadmap:", err);
       toast({ title: "Error", description: (err && err.message) ? err.message : "Failed to generate roadmap", variant: "destructive" });
@@ -395,46 +358,45 @@ const RoadmapGenerator = () => {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 bg-background">
+    <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="container mx-auto max-w-5xl">
-        <Link to="/" className="text-sm text-muted-foreground hover:text-primary mb-6 inline-flex items-center gap-2">
+        <Link to="/" className="text-sm text-white/40 hover:text-white/70 mb-6 inline-flex items-center gap-2 transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Home
         </Link>
 
-        <h1 className="text-5xl font-bold mb-4">
+        <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
           AI-Powered <span className="text-gradient">Roadmap Tracker</span>
         </h1>
-        <p className="text-xl text-muted-foreground mb-6">Generate a concise list of topics to study (basic plan).</p>
+        <p className="text-lg text-white/40 mb-6">Generate a concise list of topics to study.</p>
 
-        <Card className="p-8 border-border bg-card mb-8">
+        <Card className="p-8 glass-strong rounded-2xl mb-8">
           <div className="space-y-6">
             <div>
-              <Label>What do you want to learn?</Label>
-              <Input placeholder="e.g. Frontend Development, Machine Learning..." value={topic} onChange={(e) => setTopic(e.target.value)} onKeyDown={handleKeyPress} />
+              <Label className="text-white/60 text-xs font-medium">What do you want to learn?</Label>
+              <Input placeholder="e.g. Frontend Development, Machine Learning..." value={topic} onChange={(e) => setTopic(e.target.value)} onKeyDown={handleKeyPress} className="bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 rounded-xl h-11 mt-1.5" />
             </div>
             <div>
-              <Label>Your current knowledge (optional)</Label>
-              <Textarea placeholder="e.g. I know HTML/CSS basics..." value={currentKnowledge} onChange={(e) => setCurrentKnowledge(e.target.value)} onKeyDown={handleKeyPress} />
+              <Label className="text-white/60 text-xs font-medium">Your current knowledge (optional)</Label>
+              <Textarea placeholder="e.g. I know HTML/CSS basics..." value={currentKnowledge} onChange={(e) => setCurrentKnowledge(e.target.value)} onKeyDown={handleKeyPress} className="bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 rounded-xl mt-1.5" />
             </div>
-            <Button onClick={handleGenerate} disabled={isLoading} size="lg" className="w-full">
+            <Button onClick={handleGenerate} disabled={isLoading} size="lg" className="w-full bg-gradient-to-r from-cyan-400 to-violet-600 text-white border-0 rounded-xl shadow-lg shadow-violet-500/20 hover:shadow-violet-500/35 transition-all h-12 font-semibold">
               {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...</> : <><Sparkles className="h-4 w-4 mr-2" /> Generate Roadmap</>}
             </Button>
           </div>
         </Card>
 
         {matchedPeers.length > 0 && (
-          <Card className="p-8 border-border bg-card mb-8">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-primary"><Users className="h-5 w-5" /> Peers learning "{topic}"</h3>
+          <Card className="p-8 glass-strong rounded-2xl mb-8">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-violet-300"><Users className="h-5 w-5" /> Peers learning "{topic}"</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {matchedPeers.map((peer) => (
-                <Card key={peer.id} className="p-4 border border-border/40 bg-background/60">
+                <Card key={peer.id} className="p-4 glass rounded-xl">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-lg">{peer.name}</p>
-                      <p className="text-sm text-muted-foreground">{peer.city}</p>
-                      <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1"><Mail className="h-3 w-3" /> {peer.email}</div>
+                      <p className="font-medium text-lg text-white/90">{peer.name}</p>
+                      <p className="text-sm text-white/40">{peer.city}</p>
+                      <div className="flex items-center text-xs text-white/30 mt-1 gap-1"><Mail className="h-3 w-3" /> {peer.email}</div>
                     </div>
-
                   </div>
                 </Card>
               ))}
@@ -443,26 +405,25 @@ const RoadmapGenerator = () => {
         )}
 
         {parsedTopics.length > 0 && (
-          <Card className="p-8 border-border bg-card mb-8 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+          <Card className="p-8 glass-strong rounded-2xl mb-8 cursor-pointer" onClick={() => setExpanded(!expanded)}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Topics to study</h3>
-                <p className="text-sm text-muted-foreground">Concise list of topics and what to focus on for each.</p>
+                <h3 className="text-lg font-semibold mb-2 text-white/90">Topics to study</h3>
+                <p className="text-sm text-white/40">Concise list of topics and what to focus on for each.</p>
               </div>
-              {expanded ? <ChevronUp className="h-6 w-6 text-muted-foreground" /> : <ChevronDown className="h-6 w-6 text-muted-foreground" />}
+              {expanded ? <ChevronUp className="h-6 w-6 text-white/40" /> : <ChevronDown className="h-6 w-6 text-white/40" />}
             </div>
 
-            {/* Progress bar + percentage */}
             <div className="mt-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1" aria-hidden>
                   <Progress value={progress} aria-label="Roadmap completion progress" />
                 </div>
-                <div className="ml-4 text-sm font-medium">
+                <div className="ml-4 text-sm font-medium text-white/80">
                   {progress}%
                 </div>
               </div>
-              <div className="mt-2 text-xs text-muted-foreground">
+              <div className="mt-2 text-xs text-white/30">
                 {parsedTopics.filter((t) => t.completed).length} of {parsedTopics.length} completed
               </div>
             </div>
@@ -470,19 +431,19 @@ const RoadmapGenerator = () => {
             {expanded && (
               <div className="mt-6 space-y-4">
                 {parsedTopics.map((t, i) => (
-                  <div key={t.id} className="p-4 rounded-xl border border-border/40 bg-background/60">
+                  <div key={t.id} className="p-4 rounded-xl glass" onClick={(e) => e.stopPropagation()}>
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center justify-between gap-4">
-                          <h4 className="font-semibold text-lg">{i + 1}. {t.title}</h4>
-                          <div className="text-sm text-muted-foreground">{t.completed ? "Completed ✅" : "Pending"}</div>
+                          <h4 className="font-semibold text-lg text-white/90">{i + 1}. {t.title}</h4>
+                          <div className={`text-sm ${t.completed ? "text-emerald-400" : "text-white/30"}`}>{t.completed ? "Completed" : "Pending"}</div>
                         </div>
-                        {t.shortDescription && <p className="text-sm text-muted-foreground mt-2">{t.shortDescription}</p>}
+                        {t.shortDescription && <p className="text-sm text-white/40 mt-2">{t.shortDescription}</p>}
 
                         {t.subtopics && t.subtopics.length > 0 && (
                           <div className="mt-3">
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Subtopics</p>
-                            <ul className="list-disc ml-6 text-sm text-muted-foreground">
+                            <p className="text-xs font-medium text-white/30 mb-1">Subtopics</p>
+                            <ul className="list-disc ml-6 text-sm text-white/40">
                               {t.subtopics.map((s, si) => <li key={si}>{s}</li>)}
                             </ul>
                           </div>
@@ -490,8 +451,8 @@ const RoadmapGenerator = () => {
                       </div>
 
                       <div className="flex flex-col gap-2 w-full md:w-[320px]">
-                        <Input placeholder="Add project link (optional)" value={t.projectLink ?? ""} onChange={(e) => handleProjectLinkChange(i, e.target.value)} />
-                        <Button onClick={() => toggleCompletion(i)} variant={t.completed ? "default" : "outline"}>{t.completed ? "Mark Incomplete" : "Mark Done"}</Button>
+                        <Input placeholder="Add project link (optional)" value={t.projectLink ?? ""} onChange={(e) => handleProjectLinkChange(i, e.target.value)} className="bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 rounded-xl" />
+                        <Button onClick={() => toggleCompletion(i)} variant={t.completed ? "default" : "outline"} className={t.completed ? "bg-emerald-500/20 text-emerald-300 border-0 rounded-xl" : "border-white/10 text-white/60 rounded-xl"}>{t.completed ? "Mark Incomplete" : "Mark Done"}</Button>
                       </div>
                     </div>
                   </div>

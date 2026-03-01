@@ -26,6 +26,7 @@ import {
 import { ShootingStars } from "@/components/ui/shooting-stars";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getCachedRoadmap, saveRoadmapToCache } from "@/lib/roadmapCache";
 
 const fadeUp = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
@@ -43,9 +44,9 @@ type Week = {
   week: string;
   title: string;
   details: string[];
-  repos: string[];      // added
-  projects: string[];   // added
-  youtube: string[];    // added
+  repos: string[];
+  projects: string[];
+  youtube: string[];
   completed: boolean;
   projectLink: string;
   reflection: string;
@@ -59,8 +60,6 @@ const parseWeeks = (text?: string): Week[] => {
   if (!text || typeof text !== "string") return [];
 
   const trimmed = text.trim();
-
-  // Helper: convert an array of objects / strings into Week[]
   const topicsToWeeks = (arr: Array<any>) => {
     return arr.map((s: any, idx: number) => {
       const title =
@@ -75,14 +74,12 @@ const parseWeeks = (text?: string): Week[] => {
       const details = Array.isArray(s.topics)
         ? s.topics.map((t: any) => String(t))
         : Array.isArray(s.details)
-        ? s.details.map((d: any) => String(d))
-        : typeof s.topics === "string"
-        ? s.topics.split("\n").map((t: string) => t.trim()).filter(Boolean)
-        : Array.isArray(s.details)
-        ? s.details.map(String)
-        : [];
-
-      // Attempt to pull repos/projects/youtube if present in structured object
+          ? s.details.map((d: any) => String(d))
+          : typeof s.topics === "string"
+            ? s.topics.split("\n").map((t: string) => t.trim()).filter(Boolean)
+            : Array.isArray(s.details)
+              ? s.details.map(String)
+              : [];
       const repos = s.repos ?? s.github ?? s.repo ?? [];
       const projects = s.projects ?? s.projectIdeas ?? s.tasks ?? [];
       const youtube = s.youtube ?? s.playlists ?? s.videos ?? [];
@@ -100,8 +97,6 @@ const parseWeeks = (text?: string): Week[] => {
       } as Week;
     });
   };
-
-  // 1) JSON-ish detection and parsing
   if (/^[\[{]/.test(trimmed) || /"sections"\s*:|"\bweeks\b"\s*:|"repos"\s*:|"projects"\s*:|\"youtube\"/i.test(trimmed)) {
     let jsonSubstring = trimmed;
     try {
@@ -152,7 +147,6 @@ const parseWeeks = (text?: string): Week[] => {
             if (Array.isArray(inner)) return topicsToWeeks(inner);
             return parseWeeks(inner && typeof inner === "string" ? inner : JSON.stringify(inner));
           } catch {
-            // fallback to text parsing
           }
         } else if (Array.isArray(maybeArray)) {
           return topicsToWeeks(maybeArray);
@@ -160,11 +154,8 @@ const parseWeeks = (text?: string): Week[] => {
       }
     } catch (err) {
       console.warn("parseWeeks JSON parse failed (premium), falling back to text parsing:", err);
-      // fall through to text parsing
     }
   }
-
-  // 2) Plain-text parsing: detect "Week X" blocks, and detect in-block lines for Repos:, Projects:, YouTube:
   const lines = trimmed.split("\n");
   const weeks: Week[] = [];
   let currentWeek: Week | null = null;
@@ -194,8 +185,6 @@ const parseWeeks = (text?: string): Week[] => {
     }
 
     if (!currentWeek && line) {
-      // If there's no explicit week headings, treat short lines as separate weeks later
-      // We collect them as ephemeral weeks below
       currentWeek = {
         week: String(weeks.length + 1),
         title: line,
@@ -212,7 +201,6 @@ const parseWeeks = (text?: string): Week[] => {
     }
 
     if (currentWeek && line) {
-      // Recognize structured prefixes
       if (/^(repos?:|github:)/i.test(line)) {
         const rest = line.replace(/^(repos?:|github:)\s*/i, "");
         const parts = rest.split(/,|;|\||\band\b/).map((p) => p.trim()).filter(Boolean);
@@ -226,14 +214,11 @@ const parseWeeks = (text?: string): Week[] => {
         const parts = rest.split(/,|;|\||\band\b/).map((p) => p.trim()).filter(Boolean);
         currentWeek.youtube.push(...parts);
       } else {
-        // regular detail/bullet
         const cleaned = line.replace(/^[\-\*\•]\s*/, "").trim();
         if (cleaned) currentWeek.details.push(cleaned);
       }
     }
   });
-
-  // push any remaining week if not already pushed
   if (currentWeek) pushCurrent();
 
   return weeks;
@@ -257,21 +242,18 @@ const Premium = () => {
   const weekRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    // Prefer the new shared key "premiumWeeks" so other components (Index) read the same source.
     const saved = localStorage.getItem("premiumWeeks") ?? localStorage.getItem("premiumRoadmapProgress");
     if (saved) {
       try {
         setWeeks(JSON.parse(saved));
-      } catch {}
+      } catch { }
     }
   }, []);
 
   useEffect(() => {
     if (weeks.length > 0) {
-      // Persist under the canonical shared key so other tabs/components can read it.
       try {
         localStorage.setItem("premiumWeeks", JSON.stringify(weeks));
-        // Notify same-tab listeners that premium weeks updated
         window.dispatchEvent(new Event("premiumWeeksUpdated"));
       } catch (err) {
         console.warn("Failed to persist premiumWeeks:", err);
@@ -280,10 +262,9 @@ const Premium = () => {
       const completed = weeks.filter((w) => w.completed).length;
       setProgress((completed / weeks.length) * 100);
     } else {
-      // Clear the key if weeks became empty (optional)
       try {
         localStorage.removeItem("premiumWeeks");
-      } catch {}
+      } catch { }
       setProgress(0);
     }
   }, [weeks]);
@@ -307,9 +288,6 @@ const Premium = () => {
       })
     );
   }, [peerSearch]);
-
-  // PREMIUM: handleGenerate attempts to extract repos/projects/youtube from backend,
-  // and synthesizes placeholders when missing so premium always shows richer content.
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast({ title: "Topic required", description: "Please enter what you want to learn", variant: "destructive" });
@@ -321,6 +299,17 @@ const Premium = () => {
     setRoadmapText(null);
 
     try {
+      const cached = await getCachedRoadmap(topic, true);
+      if (cached) {
+        const cachedWeeks = parseWeeks(cached);
+        if (cachedWeeks.length > 0) {
+          setWeeks(cachedWeeks);
+          toast({ title: "Roadmap loaded", description: "Found a cached premium roadmap for this topic." });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("generate-roadmap", {
         body: { topic, currentKnowledge, premium: true },
       });
@@ -329,17 +318,12 @@ const Premium = () => {
       if (error) throw error;
 
       let maybe: any = data;
-
-      // If supabase returns a string that is JSON
       if (typeof maybe === "string") {
         try {
           maybe = JSON.parse(maybe);
         } catch {
-          // keep string if not JSON
         }
       }
-
-      // Candidate extraction
       const candidates = [
         maybe?.roadmap,
         maybe?.result,
@@ -368,15 +352,12 @@ const Premium = () => {
               break;
             }
           }
-          // If object has sections / weeks directly, stringify for parseWeeks JSON path
           if (Array.isArray(c.sections) || Array.isArray(c.weeks) || Array.isArray(c)) {
             text = typeof c === "string" ? c : JSON.stringify(c);
             break;
           }
         }
       }
-
-      // Last resort: if maybe is long string
       if (!text && maybe) {
         const str = typeof maybe === "string" ? maybe : JSON.stringify(maybe);
         if (str && str.trim().length > 0) {
@@ -398,8 +379,6 @@ const Premium = () => {
       setRoadmapText(text);
 
       let extracted = parseWeeks(text);
-
-      // If parseWeeks returned nothing, synthesize a 6-week enriched plan with repos/projects/youtube placeholders
       if (!Array.isArray(extracted) || extracted.length === 0) {
         extracted = Array.from({ length: 6 }).map((_, i) => {
           const title = `${topic} — ${i === 0 ? "Foundations" : i === 1 ? "Core Concepts" : i === 2 ? "Hands-on" : i === 3 ? "Advanced Patterns" : i === 4 ? "Project" : "Wrap-up"}`;
@@ -428,7 +407,6 @@ const Premium = () => {
           } as Week;
         });
       } else {
-        // Ensure repos/projects/youtube exist per week (placeholder if missing)
         extracted = extracted.map((w, idx) => {
           const slug = normalize(topic).replace(/\s+/g, "-") || "topic";
           const repos = Array.isArray(w.repos) && w.repos.length ? w.repos : [`https://github.com/your-org/${slug}-starter`];
@@ -446,8 +424,6 @@ const Premium = () => {
           } as Week;
         });
       }
-
-      // Deduplicate small things and limit to 24 weeks max
       const cleaned = extracted.slice(0, 24).map((w, idx) => ({
         ...w,
         week: String(idx + 1),
@@ -457,9 +433,8 @@ const Premium = () => {
         projects: Array.from(new Set((w.projects || []).map(String))).slice(0, 8),
         youtube: Array.from(new Set((w.youtube || []).map(String))).slice(0, 8),
       }));
-
-      // setWeeks will trigger the saving useEffect which persists and notifies listeners
       setWeeks(cleaned);
+      await saveRoadmapToCache(topic, true, cleaned);
 
       toast({ title: "Premium roadmap ready 🚀", description: "An enriched roadmap (repos, projects, playlists) has been generated." });
     } catch (err) {
@@ -474,8 +449,6 @@ const Premium = () => {
     setWeeks((prev) => {
       const wasCompletedBefore = prev[index]?.completed;
       const updated = prev.map((w, i) => (i === index ? { ...w, completed: !w.completed } : w));
-
-      // Persist immediately so other components see the change without waiting for next render
       try {
         localStorage.setItem("premiumWeeks", JSON.stringify(updated));
         window.dispatchEvent(new Event("premiumWeeksUpdated"));
@@ -586,7 +559,6 @@ const Premium = () => {
 
   return (
     <div className="dark">
-      {/* BACKGROUND */}
       <div className="fixed inset-0 z-0 bg-black overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.1)_0%,rgba(0,0,0,0)_80%)]" />
         <div className="absolute inset-0 stars" />
@@ -596,7 +568,6 @@ const Premium = () => {
       </div>
 
       <main className="relative z-10 min-h-screen text-slate-100 overflow-hidden">
-        {/* TOP BAR */}
         <header className="pt-6 pb-4">
           <div className="container mx-auto px-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -617,8 +588,6 @@ const Premium = () => {
             </Link>
           </div>
         </header>
-
-        {/* HERO + SUMMARY */}
         <section className="pb-10 pt-4">
           <div className="container mx-auto px-6">
             <motion.div initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
@@ -643,8 +612,6 @@ const Premium = () => {
             </motion.div>
           </div>
         </section>
-
-        {/* FEATURE GRID 1 */}
         <section className="pb-8">
           <div className="container mx-auto px-6">
             <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={{ show: { transition: { staggerChildren: 0.1 } } }}>
@@ -654,7 +621,6 @@ const Premium = () => {
               </motion.p>
 
               <motion.div variants={fadeUp} className="grid md:grid-cols-3 gap-6 mb-8">
-                {/* Best roadmaps */}
                 <Card className="relative p-6 bg-white/5 border border-white/10 backdrop-blur-xl">
                   <div className="flex items-center gap-3 mb-3">
                     <Code2 className="h-5 w-5 text-cyan-300" />
@@ -665,8 +631,6 @@ const Premium = () => {
                   </div>
                   <p className="text-sm text-white/70">Roadmaps with everything: concepts, videos, articles, hands-on tasks, revision blocks, mock interviews and deep-dive phases for when you&apos;re ready.</p>
                 </Card>
-
-                {/* AI live on-call tutor */}
                 <Card className="relative p-6 bg-white/5 border border-white/10 backdrop-blur-xl">
                   <div className="flex items-center gap-3 mb-3">
                     <PhoneCall className="h-5 w-5 text-emerald-300" />
@@ -680,8 +644,6 @@ const Premium = () => {
                     Step-by-step help, code walkthroughs, bug explanations — not just “read docs”.
                   </p>
                 </Card>
-
-                {/* Human-like chatbot */}
                 <Card className="relative p-6 bg-white/5 border border-white/10 backdrop-blur-xl">
                   <div className="flex items-center gap-3 mb-3">
                     <Bot className="h-5 w-5 text-pink-300" />
@@ -691,7 +653,7 @@ const Premium = () => {
                     </div>
                   </div>
                   <p className="text-sm text-white/70">
-                    A coding chatbot that knows your stack, your past questions, your goals — 
+                    A coding chatbot that knows your stack, your past questions, your goals —
                     and responds like a human teammate.
                   </p>
                 </Card>
@@ -699,8 +661,6 @@ const Premium = () => {
             </motion.div>
           </div>
         </section>
-
-        {/* FEATURE GRID 2 */}
         <section className="pb-10">
           <div className="container mx-auto px-6">
             <motion.div
@@ -722,7 +682,6 @@ const Premium = () => {
               </motion.p>
 
               <motion.div variants={fadeUp} className="grid md:grid-cols-3 gap-6 mb-10">
-                {/* Vibe coding */}
                 <Card className="relative p-6 bg-white/5 border border-white/10 backdrop-blur-xl">
                   <div className="flex items-center gap-3 mb-3">
                     <Users className="h-5 w-5 text-sky-300" />
@@ -735,8 +694,6 @@ const Premium = () => {
                     Form squads, share same roadmap, see each other’s % and push each other to ship.
                   </p>
                 </Card>
-
-                {/* Weekly projects */}
                 <Card className="relative p-6 bg-white/5 border border-white/10 backdrop-blur-xl">
                   <div className="flex items-center gap-3 mb-3">
                     <Activity className="h-5 w-5 text-amber-300" />
@@ -749,8 +706,6 @@ const Premium = () => {
                     Every week, focused tasks and mini-projects built from your roadmap.
                   </p>
                 </Card>
-
-                {/* Adaptive roadmap */}
                 <Card className="relative p-6 bg-white/5 border border-white/10 backdrop-blur-xl">
                   <div className="flex items-center gap-3 mb-3">
                     <Rocket className="h-5 w-5 text-violet-300" />
@@ -767,14 +722,10 @@ const Premium = () => {
             </motion.div>
           </div>
         </section>
-
-        {/* PREMIUM WORKSPACE */}
         <section className="pb-14">
           <div className="container mx-auto px-6">
             <Card className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8">
               <div className="flex flex-col gap-8">
-                
-                {/* Title Bar */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div>
                     <h2 className="text-2xl font-semibold mb-1">Premium workspace</h2>
@@ -789,14 +740,10 @@ const Premium = () => {
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-6">
-
-                  {/* Column 1 — Generate Roadmap */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-white/80 mb-1">
                       1. Generate your premium roadmap
                     </h3>
-
-                    {/* Topic Input */}
                     <div>
                       <Label className="text-xs text-white/70">What do you want to learn?</Label>
                       <Input
@@ -807,8 +754,6 @@ const Premium = () => {
                         onKeyDown={handleKeyPress}
                       />
                     </div>
-
-                    {/* Knowledge Input */}
                     <div>
                       <Label className="text-xs text-white/70">What do you already know?</Label>
                       <Textarea
@@ -819,8 +764,6 @@ const Premium = () => {
                         onKeyDown={handleKeyPress}
                       />
                     </div>
-
-                    {/* Generate Button */}
                     <Button
                       className="mt-2 px-5 py-2 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-black text-sm flex items-center gap-2"
                       onClick={handleGenerate}
@@ -838,8 +781,6 @@ const Premium = () => {
                         </>
                       )}
                     </Button>
-
-                    {/* Raw Text Output */}
                     <div className="mt-4">
                       <h4 className="text-xs font-semibold text-white/70 mb-1">Raw roadmap text</h4>
                       <div className="min-h-[120px] max-h-[180px] overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3 text-xs text-white/70 whitespace-pre-wrap">
@@ -851,14 +792,10 @@ const Premium = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Column 2 — Weeks */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-white/80 mb-1">
                       2. Weekly plan, reflections & AI tutor
                     </h3>
-
-                    {/* Progress */}
                     <div className="mb-2">
                       <Label className="text-xs text-white/70">Overall progress</Label>
                       <div className="flex items-center gap-2 mt-1">
@@ -868,8 +805,6 @@ const Premium = () => {
                         </span>
                       </div>
                     </div>
-
-                    {/* Active Week Card */}
                     {nextActiveWeek && (
                       <Card className="bg-black/40 border border-white/10 p-3 mb-2">
                         <p className="text-xs text-white/60 mb-1">This week's active focus</p>
@@ -886,8 +821,6 @@ const Premium = () => {
                         </Button>
                       </Card>
                     )}
-
-                    {/* Expandable Weekly Breakdown */}
                     <Card
                       className="bg-black/40 border border-white/10 cursor-pointer"
                       onClick={() => setExpanded(!expanded)}
@@ -917,15 +850,12 @@ const Premium = () => {
                               ref={(el) => (weekRefs.current[i] = el)}
                               className="border border-white/10 rounded-lg p-3 space-y-2"
                             >
-                              {/* Week Header */}
                               <div className="flex items-center justify-between gap-2">
                                 <div>
                                   <p className="text-xs font-semibold">
                                     Week {week.week}: {week.title}
                                   </p>
                                 </div>
-
-                                {/* Buttons */}
                                 <div className="flex gap-2 flex-wrap">
                                   <Button size="sm" variant="outline"
                                     className="h-7 text-[11px] px-2"
@@ -955,15 +885,11 @@ const Premium = () => {
                                   </Button>
                                 </div>
                               </div>
-
-                              {/* Details */}
                               <ul className="list-disc ml-4 text-[11px] text-white/70">
                                 {week.details.map((d, j) => (
                                   <li key={j}>{d}</li>
                                 ))}
                               </ul>
-
-                              {/* Premium extras: repos */}
                               {Array.isArray(week.repos) && week.repos.length > 0 && (
                                 <div className="mb-2">
                                   <div className="text-sm font-semibold">Recommended GitHub Repos</div>
@@ -978,8 +904,6 @@ const Premium = () => {
                                   </ul>
                                 </div>
                               )}
-
-                              {/* Premium extras: projects */}
                               {Array.isArray(week.projects) && week.projects.length > 0 && (
                                 <div className="mb-2">
                                   <div className="text-sm font-semibold">Project Suggestions</div>
@@ -990,8 +914,6 @@ const Premium = () => {
                                   </ul>
                                 </div>
                               )}
-
-                              {/* Premium extras: youtube */}
                               {Array.isArray(week.youtube) && week.youtube.length > 0 && (
                                 <div className="mb-2">
                                   <div className="text-sm font-semibold">YouTube / Playlists</div>
@@ -1006,8 +928,6 @@ const Premium = () => {
                                   </ul>
                                 </div>
                               )}
-
-                              {/* Project Link */}
                               <Input
                                 className="bg-black/50 border-white/20 text-[11px]"
                                 placeholder="Paste project/demo link"
@@ -1017,8 +937,6 @@ const Premium = () => {
                                 }
                                 onClick={(e) => e.stopPropagation()}
                               />
-
-                              {/* Reflection */}
                               <Textarea
                                 className="bg-black/50 border-white/20 text-[11px] min-h-[60px] mt-1"
                                 placeholder="Reflection: What did you do this week?"
@@ -1031,8 +949,6 @@ const Premium = () => {
                         </div>
                       )}
                     </Card>
-
-                    {/* Adaptive Suggestion */}
                     <Card className="bg-black/40 border border-white/10 p-3">
                       <p className="text-xs font-semibold text-white/80 mb-1">
                         Adaptive roadmap suggestion
@@ -1040,8 +956,6 @@ const Premium = () => {
                       <p className="text-[11px] text-white/70">{getAdaptiveMessage()}</p>
                     </Card>
                   </div>
-
-                  {/* Column 3 — Vibe Squad */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-white/80 mb-1">
                       3. Vibe coding squad (preview)
@@ -1086,7 +1000,7 @@ const Premium = () => {
                             💬 Ask AI to plan session
                           </Button>
                         </Card>
-                      ))} 
+                      ))}
                     </div>
 
                     <p className="text-[11px] text-white/50">
@@ -1100,34 +1014,12 @@ const Premium = () => {
           </div>
         </section>
 
-        {/* FOOTER */}
         <footer className="py-10">
           <div className="container mx-auto px-6 text-center text-xs text-white/50">
             © {new Date().getFullYear()} SyncVerse Premium · Built for devs who actually ship.
           </div>
         </footer>
       </main>
-
-      {/* BACKGROUND STAR FIELD STYLE */}
-      <style>{`
-        .stars {
-          background-image:
-            radial-gradient(2px 2px at 20px 30px, #fff, transparent),
-            radial-gradient(2px 2px at 40px 70px, #fff, transparent),
-            radial-gradient(2px 2px at 50px 160px, #fff, transparent),
-            radial-gradient(2px 2px at 90px 40px, #fff, transparent),
-            radial-gradient(2px 2px at 130px 80px, #fff, transparent),
-            radial-gradient(2px 2px at 160px 120px, #fff, transparent);
-          background-repeat: repeat;
-          background-size: 200px 200px;
-          animation: twinkle 5s ease-in-out infinite;
-          opacity: 0.5;
-        }
-        @keyframes twinkle {
-          0%, 100% { opacity: 0.5; }
-          50% { opacity: 0.8; }
-        }
-      `}</style>
     </div>
   );
 };

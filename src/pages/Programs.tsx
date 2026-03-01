@@ -1,4 +1,3 @@
-// Programs.tsx
 import React, { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,19 +6,8 @@ import { Input } from "@/components/ui/input";
 import { ExternalLink, Search, Calendar, DollarSign, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
-/**
- * Programs.tsx
- * - 12 major programs with 400–500 word prep guides (prewritten)
- * - Apply Now opens official link
- * - View Prep Guide opens modal with structured content
- *
- * NOTE: Keep same design tokens / components as your app.
- */
-
-/* ----------------------------- Program Data ----------------------------- */
-/* Each guide is detailed and structured: About, Eligibility, Selection Process,
-   Preparation Roadmap, Tips, Resources. Links are the official / verified pages. */
 type Program = {
+
   id: number;
   name: string;
   shortName?: string;
@@ -553,35 +541,29 @@ Resources
   },
 ];
 
-/* --------------------------- Programs Component -------------------------- */
-
 export default function Programs(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStacks, setSelectedStacks] = useState<Set<string>>(new Set());
   const [modalProgram, setModalProgram] = useState<Program | null>(null);
 
-  // derive all stacks
   const allTechStacks = useMemo(() => {
     const set = new Set<string>();
     programs.forEach((p) => p.techStacks.forEach((t) => set.add(t)));
     return Array.from(set).sort();
   }, []);
 
-  // filtering
   const filteredPrograms = programs.filter((p) => {
     const searchMatch =
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.techStacks.join(" ").toLowerCase().includes(searchTerm.toLowerCase());
     if (selectedStacks.size === 0) return searchMatch;
-    // require at least one selected stack present
     const has = Array.from(selectedStacks).some((s) =>
       p.techStacks.includes(s)
     );
     return searchMatch && has;
   });
 
-  // toggle stack selection
   const toggleStack = (stack: string) => {
     setSelectedStacks((prev) => {
       const next = new Set(prev);
@@ -594,82 +576,86 @@ export default function Programs(): JSX.Element {
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="container mx-auto max-w-6xl">
-        <div className="mb-6">
-          <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
+        <div className="mb-10">
+          <Link to="/" className="text-sm text-white/40 hover:text-white/70 mb-6 inline-flex items-center transition-colors">
             ← Back to Home
           </Link>
-        </div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
+            Opportunity Hub — <span className="text-gradient">Programs & Prep Guides</span>
+          </h1>
+          <p className="text-white/40 mb-6 max-w-2xl">
+            Browse top global & regional programs (GSoC, Outreachy, MLH, LFX, Hacktoberfest, and more). Use search and tech filters — click "Apply Now" to visit the official page or "View Prep Guide" for a quick, structured prep plan.
+          </p>
 
-        <h1 className="text-4xl md:text-5xl font-bold mb-3">
-          Opportunity Hub — <span className="text-gradient">Programs & Prep Guides</span>
-        </h1>
-        <p className="text-muted-foreground mb-6 max-w-2xl">
-          Browse top global & regional programs (GSoC, Outreachy, MLH, LFX, Hacktoberfest, and more). Use search and tech filters — click "Apply Now" to visit the official page or "View Prep Guide" for a quick, structured prep plan.
-        </p>
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+              <Input
+                placeholder="Search programs, descriptions, or stacks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 rounded-xl h-11"
+              />
+            </div>
 
-        {/* Search & Filters */}
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search programs, descriptions, or stacks..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={selectedStacks.size === 0 ? "default" : "outline"}
-              onClick={() => setSelectedStacks(new Set())}
-            >
-              All Stacks
-            </Button>
-            {allTechStacks.map((stack) => (
+            <div className="flex flex-wrap gap-2">
               <Badge
-                key={stack}
-                className={`cursor-pointer px-3 py-1 ${selectedStacks.has(stack) ? "bg-primary text-white" : "bg-muted/10 text-muted-foreground"}`}
-                onClick={() => toggleStack(stack)}
+                className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${selectedStacks.size === 0
+                  ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                  : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
+                  }`}
+                onClick={() => setSelectedStacks(new Set())}
               >
-                {stack}
+                All Stacks
               </Badge>
-            ))}
+              {allTechStacks.map((stack) => (
+                <Badge
+                  key={stack}
+                  className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${selectedStacks.has(stack)
+                    ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                    : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
+                    }`}
+                  onClick={() => toggleStack(stack)}
+                >
+                  {stack}
+                </Badge>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Programs Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredPrograms.map((p) => (
-            <Card key={p.id} className="p-6 hover:shadow-lg transition-all">
+            <Card key={p.id} className="group p-6 glass hover:bg-white/[0.06] rounded-2xl transition-all duration-500">
               <div className="flex items-start gap-4 mb-3">
-                <div className="text-4xl">{p.logo}</div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-semibold">{p.name}</h2>
-                  <p className="text-sm text-muted-foreground">{p.description}</p>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/30 to-cyan-500/20 flex items-center justify-center text-lg font-bold text-white/70 flex-shrink-0">
+                  {(p.shortName || p.name).charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-semibold group-hover:text-violet-300 transition-colors">{p.name}</h2>
+                  <p className="text-sm text-white/40 leading-relaxed mt-1">{p.description}</p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-1.5 mb-3">
                 {p.techStacks.map((t) => (
-                  <Badge key={t} variant="secondary" className="text-xs">
+                  <Badge key={t} variant="secondary" className="text-[10px] bg-white/[0.06] text-white/60 border-0 rounded-md px-2 py-0.5">
                     {t}
                   </Badge>
                 ))}
               </div>
 
-              <div className="text-sm flex justify-between text-muted-foreground mb-4">
+              <div className="text-xs flex justify-between text-white/30 mb-4">
                 <span><Calendar className="inline h-3 w-3 mr-1" /> {p.deadline}</span>
                 <span><DollarSign className="inline h-3 w-3 mr-1" /> {p.stipend}</span>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <a href={p.applyLink} target="_blank" rel="noopener noreferrer" className="flex-1">
-                  <Button className="w-full">Apply Now</Button>
+                  <Button className="w-full bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border-0 rounded-xl h-9 text-sm">Apply Now</Button>
                 </a>
-                <Button variant="outline" className="flex-1" onClick={() => setModalProgram(p)}>
-                  View Prep Guide
+                <Button variant="outline" className="flex-1 border-white/10 text-white/60 hover:bg-white/5 rounded-xl h-9 text-sm" onClick={() => setModalProgram(p)}>
+                  Prep Guide
                 </Button>
               </div>
             </Card>
@@ -677,39 +663,39 @@ export default function Programs(): JSX.Element {
         </div>
       </div>
 
-      {/* Modal */}
       {modalProgram && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setModalProgram(null)} />
-          <div className="relative bg-background border border-border rounded-lg shadow-xl w-full max-w-3xl p-6 overflow-y-auto max-h-[85vh]">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModalProgram(null)} />
+          <div className="relative glass-strong rounded-2xl shadow-2xl w-full max-w-3xl p-8 overflow-y-auto max-h-[85vh]">
             <button
               aria-label="Close"
-              className="absolute top-3 right-3 p-2 rounded hover:bg-muted/10"
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white"
               onClick={() => setModalProgram(null)}
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="mb-3 flex items-start gap-3">
-              <div className="text-3xl">{modalProgram.logo}</div>
+            <div className="mb-4 flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/30 to-cyan-500/20 flex items-center justify-center text-lg font-bold text-white/70 flex-shrink-0">
+                {(modalProgram.shortName || modalProgram.name).charAt(0)}
+              </div>
               <div>
                 <h2 className="text-2xl font-bold">{modalProgram.name}</h2>
-                <p className="text-sm text-muted-foreground">{modalProgram.description}</p>
+                <p className="text-sm text-white/40">{modalProgram.description}</p>
               </div>
             </div>
 
             <div className="prose dark:prose-invert max-w-none">
-              {/* The guide text already includes section headings and line breaks */}
-              <pre className="whitespace-pre-wrap text-sm">{modalProgram.guide}</pre>
+              <pre className="whitespace-pre-wrap text-sm text-white/70 leading-relaxed font-sans">{modalProgram.guide}</pre>
             </div>
 
             <div className="mt-6 flex gap-3">
               <a href={modalProgram.applyLink} target="_blank" rel="noopener noreferrer" className="flex-1">
-                <Button className="w-full">
+                <Button className="w-full bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border-0 rounded-xl">
                   <ExternalLink className="mr-2 h-4 w-4" /> Official Apply Page
                 </Button>
               </a>
-              <Button variant="ghost" className="flex-1" onClick={() => setModalProgram(null)}>
+              <Button variant="outline" className="flex-1 border-white/10 text-white/60 hover:bg-white/5 rounded-xl" onClick={() => setModalProgram(null)}>
                 Close
               </Button>
             </div>

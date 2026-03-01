@@ -1,4 +1,3 @@
-// Roadmaps.tsx
 import React, { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,15 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Calendar, Users, ArrowRight, X, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 
-/**
- * Roadmaps.tsx
- * - One "View Roadmap" button per card
- * - Modal overlay (same-page) with long-form detailed guides (~800 words each)
- * - Search + tech-stack filter
- * - Simple, readable modal style
- */
-
-/* --------------------------- Data Model --------------------------- */
 type Roadmap = {
   id: number;
   title: string;
@@ -461,21 +451,17 @@ const roadmapsData: Roadmap[] = [
   },
 ];
 
-/* ------------------------- Component Implementation ------------------------- */
-
 export default function Roadmaps(): JSX.Element {
   const [query, setQuery] = useState("");
   const [stackFilter, setStackFilter] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Roadmap | null>(null);
 
-  // derive all stacks
   const allStacks = useMemo(() => {
     const s = new Set<string>();
     roadmapsData.forEach((r) => r.techs.forEach((t) => s.add(t)));
     return Array.from(s).sort();
   }, []);
 
-  // filtered
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return roadmapsData.filter((r) => {
@@ -502,101 +488,102 @@ export default function Roadmaps(): JSX.Element {
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="container mx-auto max-w-6xl">
-        <div className="mb-6">
-          <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
+        <div className="mb-10">
+          <Link to="/" className="text-sm text-white/40 hover:text-white/70 mb-6 inline-flex items-center transition-colors">
             ← Back to Home
           </Link>
-        </div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
+            Roadmap Hub — <span className="text-gradient">Deep Learning Paths</span>
+          </h1>
+          <p className="text-white/40 mb-6 max-w-2xl">
+            Choose a structured 5–6 month learning path — each guide gives a comprehensive month-by-month plan, projects, resources, and professional tips.
+          </p>
 
-        <h1 className="text-4xl md:text-5xl font-bold mb-3">
-          Roadmap Hub — <span className="text-gradient">Deep Learning Paths</span>
-        </h1>
-        <p className="text-muted-foreground mb-6 max-w-2xl">
-          Choose a structured 5–6 month learning path — each guide gives a comprehensive month-by-month plan, projects, resources, and professional tips.
-        </p>
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+              <Input
+                placeholder="Search roadmaps, descriptions, or stacks..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 rounded-xl h-11"
+              />
+            </div>
 
-        {/* Search & Filters */}
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search roadmaps, descriptions, or stacks..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={stackFilter.size === 0 ? "default" : "outline"}
-              onClick={() => setStackFilter(new Set())}
-            >
-              All Stacks
-            </Button>
-
-            {allStacks.map((s) => (
+            <div className="flex flex-wrap gap-2">
               <Badge
-                key={s}
-                className={`cursor-pointer px-3 py-1 ${stackFilter.has(s) ? "bg-primary text-white" : "bg-muted/10 text-muted-foreground"}`}
-                onClick={() => toggleStack(s)}
+                className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${stackFilter.size === 0
+                    ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                    : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
+                  }`}
+                onClick={() => setStackFilter(new Set())}
               >
-                {s}
+                All Stacks
               </Badge>
-            ))}
+
+              {allStacks.map((s) => (
+                <Badge
+                  key={s}
+                  className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${stackFilter.has(s)
+                      ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                      : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
+                    }`}
+                  onClick={() => toggleStack(s)}
+                >
+                  {s}
+                </Badge>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((r, idx) => (
-            <Card key={r.id} className="p-6 border-border bg-card hover-lift card-glow group" style={{ animationDelay: `${idx * 0.05}s` }}>
+            <Card key={r.id} className="group p-6 glass hover:bg-white/[0.06] rounded-2xl transition-all duration-500">
               <div className="flex items-start justify-between mb-3">
-                <Badge variant="outline" className="border-primary/30 text-primary">
+                <Badge variant="outline" className="border-violet-500/30 text-violet-400 rounded-lg text-[10px] uppercase tracking-wider">
                   {r.level}
                 </Badge>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" /> <span>{r.learners.toLocaleString()}</span>
+                <div className="flex items-center gap-1 text-xs text-white/40">
+                  <Users className="h-3.5 w-3.5" /> <span>{r.learners.toLocaleString()}</span>
                 </div>
               </div>
 
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">{r.title}</h3>
-              <p className="text-sm text-muted-foreground mb-3">{r.description}</p>
+              <h3 className="text-lg font-semibold mb-2 group-hover:text-violet-300 transition-colors">{r.title}</h3>
+              <p className="text-sm text-white/40 mb-3 leading-relaxed">{r.description}</p>
 
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-1.5 mb-3">
                 {r.techs.map((t) => (
-                  <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
+                  <Badge key={t} variant="secondary" className="text-[10px] bg-white/[0.06] text-white/60 border-0 rounded-md px-2 py-0.5">{t}</Badge>
                 ))}
               </div>
 
-              <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+              <div className="flex items-center justify-between text-xs text-white/30 mb-4">
                 <span><Calendar className="inline h-3 w-3 mr-1" />{r.duration}</span>
-                <span className="text-xs">Comprehensive long guide</span>
+                <span>Comprehensive guide</span>
               </div>
 
-              {/* ONLY ONE BUTTON */}
-              <div className="flex gap-3">
-                <Button className="flex-1" onClick={() => setSelected(r)}>
-                  View Roadmap
-                </Button>
-              </div>
+              <Button
+                className="w-full bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border-0 rounded-xl h-9 text-sm"
+                onClick={() => setSelected(r)}
+              >
+                View Roadmap
+              </Button>
             </Card>
           ))}
         </div>
       </div>
 
-      {/* Modal (fixed version) */}
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
-            onClick={() => setSelected(null)} 
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setSelected(null)}
           />
-          <div className="relative z-50 w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-background border border-border rounded-lg shadow-xl p-6">
+          <div className="relative z-50 w-full max-w-5xl max-h-[90vh] overflow-y-auto glass-strong rounded-2xl shadow-2xl p-8">
             <button
               aria-label="Close"
-              className="absolute top-4 right-4 p-2 rounded-md hover:bg-muted transition-colors"
+              className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white"
               onClick={() => setSelected(null)}
             >
               <X className="h-5 w-5" />
@@ -604,27 +591,27 @@ export default function Roadmaps(): JSX.Element {
 
             <div className="mb-6">
               <h2 className="text-2xl font-bold mb-2">{selected.title}</h2>
-              <p className="text-sm text-muted-foreground">{selected.duration} • {selected.level}</p>
+              <p className="text-sm text-white/40">{selected.duration} · {selected.level}</p>
             </div>
 
             <div className="prose prose-sm max-w-none dark:prose-invert">
-              {/* Using a custom div with proper styling instead of prose class */}
-              <div 
-                className="text-sm leading-relaxed space-y-4"
-                dangerouslySetInnerHTML={{ __html: selected.guide }} 
+              <div
+                className="text-sm leading-relaxed space-y-4 text-white/70"
+                dangerouslySetInnerHTML={{ __html: selected.guide }}
               />
             </div>
 
             <div className="mt-6 flex gap-3">
-              <Button onClick={() => {
-                // copy plain text (strip tags)
-                const plain = selected.guide.replace(/<[^>]*>/g, "");
-                navigator.clipboard.writeText(plain);
-                alert("Guide copied to clipboard (plain text).");
-              }}>
+              <Button
+                className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border-0 rounded-xl"
+                onClick={() => {
+                  const plain = selected.guide.replace(/<[^>]*>/g, "");
+                  navigator.clipboard.writeText(plain);
+                }}
+              >
                 Copy Guide
               </Button>
-              <Button variant="outline" onClick={() => setSelected(null)}>Close</Button>
+              <Button variant="outline" className="border-white/10 text-white/60 hover:bg-white/5 rounded-xl" onClick={() => setSelected(null)}>Close</Button>
             </div>
           </div>
         </div>

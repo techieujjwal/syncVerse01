@@ -4,11 +4,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check, Star, Zap, Award, TrendingUp, Briefcase, Target, BookOpen } from "lucide-react";
 
-// 类型定义保持不变
+
 type SkillInput = {
   id: string;
   name: string;
-  proficiency: number; // 0-5
+  proficiency: number;
   lastUsed?: string | null;
 };
 
@@ -24,11 +24,11 @@ type UserProfile = {
   goalRole?: string;
 };
 
-// 工具函数保持不变
+
 const uid = (prefix = "id") => `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 const clamp = (v: number, a = 0, b = 100) => Math.max(a, Math.min(b, v));
 
-// Mock市场数据保持不变
+
 function mockMarketData() {
   return {
     trendingSkills: [
@@ -49,7 +49,7 @@ function mockMarketData() {
   };
 }
 
-// 预测薪资函数保持不变
+
 function forecastSalary(user: UserProfile, market: ReturnType<typeof mockMarketData>) {
   let base = user.currentSalaryLPA || 0;
   const expFactor = clamp((user.yearsExperience || 0) / 5, 0, 2);
@@ -68,7 +68,8 @@ function forecastSalary(user: UserProfile, market: ReturnType<typeof mockMarketD
   return { lower, predicted, upper };
 }
 
-// 技能差距分析函数保持不变
+
+
 function analyzeSkillGap(user: UserProfile, targetRole: string | undefined, market: ReturnType<typeof mockMarketData>) {
   const roleToSkills: Record<string, string[]> = {
     "DevOps Engineer": ["Linux", "Docker", "Kubernetes", "AWS", "CI/CD"],
@@ -91,7 +92,7 @@ function analyzeSkillGap(user: UserProfile, targetRole: string | undefined, mark
   return gaps;
 }
 
-// 生成路线图函数保持不变
+
 function generateRoadmap(user: UserProfile, targetRole?: string) {
   const gap = analyzeSkillGap(user, targetRole || user.goalRole, mockMarketData());
   const steps: { id: string; skill: string; weeks: number; outcome: string; resourceHint: string }[] = [];
@@ -116,7 +117,7 @@ function generateRoadmap(user: UserProfile, targetRole?: string) {
   return steps;
 }
 
-// 徽章计算函数保持不变
+
 function computeBadges(user: UserProfile, planSteps: ReturnType<typeof generateRoadmap>) {
   const badges: { id: string; title: string; description: string; earned: boolean }[] = [];
   const profileComplete = !!user.name && !!user.currentTitle && user.skills.length >= 3 && !!user.currentSalaryLPA;
@@ -138,18 +139,18 @@ function computeBadges(user: UserProfile, planSteps: ReturnType<typeof generateR
   return badges;
 }
 
-// 🌌 深色网格背景主题调色板
+
 const palette = {
   bg: "relative bg-black text-gray-100",
-  card: "bg-gray-800/80 backdrop-blur-lg",
-  accent: "bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500",
+  card: "bg-white/[0.04] backdrop-blur-xl",
+  accent: "bg-gradient-to-r from-violet-600 via-pink-500 to-rose-500",
   primaryText: "text-gray-100",
-  subText: "text-gray-400",
-  border: "border-gray-700",
-  input: "bg-gray-700/50 border-gray-600 text-gray-100",
-  button: "bg-gray-700 hover:bg-gray-600",
-  skillBar: "bg-gradient-to-r from-purple-500 to-pink-500",
-  progress: "bg-gradient-to-r from-green-400 to-teal-400",
+  subText: "text-white/40",
+  border: "border-white/[0.08]",
+  input: "bg-white/[0.04] border-white/10 text-gray-100",
+  button: "bg-white/[0.06] hover:bg-white/[0.1]",
+  skillBar: "bg-gradient-to-r from-violet-500 to-pink-500",
+  progress: "bg-gradient-to-r from-cyan-400 to-teal-400",
 };
 
 export default function Expert() {
@@ -157,7 +158,7 @@ export default function Expert() {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("expert_profile") : null;
       if (raw) return JSON.parse(raw) as UserProfile;
-    } catch (e) {}
+    } catch (e) { }
     return {
       id: uid("user"),
       name: "",
@@ -180,7 +181,7 @@ export default function Expert() {
   useEffect(() => {
     try {
       localStorage.setItem("expert_profile", JSON.stringify(user));
-    } catch (e) {}
+    } catch (e) { }
   }, [user]);
 
   const salaryForecast = useMemo(() => forecastSalary(user, market), [user, market]);
@@ -257,7 +258,7 @@ export default function Expert() {
       }}
     >
       <div className="mx-auto max-w-7xl">
-        {/* 顶部标题栏 */}
+
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -265,7 +266,7 @@ export default function Expert() {
           className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8"
         >
           <div className="flex items-center gap-4">
-            <motion.div 
+            <motion.div
               whileHover={{ rotate: 15, scale: 1.1 }}
               className="rounded-2xl p-3 shadow-lg"
               style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)" }}
@@ -285,7 +286,7 @@ export default function Expert() {
               <div className="text-xs text-gray-400">Profile completion</div>
               <div className="text-lg font-bold">{completionScore}%</div>
               <div className="w-24 h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
-                <motion.div 
+                <motion.div
                   className="h-full rounded-full"
                   style={{ background: "linear-gradient(90deg, #8b5cf6, #ec4899)" }}
                   initial={{ width: 0 }}
@@ -306,9 +307,7 @@ export default function Expert() {
           </div>
         </motion.header>
 
-        {/* 主内容区 */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* 左侧内容区 */}
           <div className="col-span-1 lg:col-span-7">
             <motion.div
               layout
@@ -419,8 +418,8 @@ export default function Expert() {
                       </h3>
                       <div className="space-y-4">
                         {user.skills.map((sk) => (
-                          <motion.div 
-                            key={sk.id} 
+                          <motion.div
+                            key={sk.id}
                             layout
                             whileHover={{ y: -2 }}
                             className={`p-4 rounded-xl border ${palette.border} bg-gray-700/30`}
@@ -454,10 +453,10 @@ export default function Expert() {
                                 </motion.button>
                               </div>
                             </div>
-                            
-                            {/* 技能进度条 */}
+
+
                             <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
-                              <motion.div 
+                              <motion.div
                                 className={`h-full rounded-full ${palette.skillBar}`}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${(sk.proficiency / 5) * 100}%` }}
@@ -519,11 +518,11 @@ export default function Expert() {
                         {user.goalRole}
                       </div>
                     </div>
-                    
+
                     <p className="text-gray-400 mb-6">Forecast & roadmap generated from your profile and live market signals.</p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <motion.div 
+                      <motion.div
                         whileHover={{ y: -5 }}
                         className={`p-5 rounded-xl border ${palette.border} bg-gradient-to-br from-gray-800/50 to-gray-900/50`}
                       >
@@ -539,7 +538,7 @@ export default function Expert() {
                         </div>
                       </motion.div>
 
-                      <motion.div 
+                      <motion.div
                         whileHover={{ y: -5 }}
                         className={`p-5 rounded-xl border ${palette.border} bg-gradient-to-br from-gray-800/50 to-gray-900/50`}
                       >
@@ -551,19 +550,18 @@ export default function Expert() {
                           {Math.round(Math.min(100, (user.skills.reduce((s, x) => s + x.proficiency, 0) / (user.skills.length * 5)) * 100))}%
                         </div>
                         <div className="text-sm text-gray-400 mt-1">
-                          Based on proficiency + trending skills
+                          Based on proficiency and trending skills
                         </div>
                       </motion.div>
                     </div>
 
-                    {/* 进度条 */}
                     <div className="mb-6">
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-400">Roadmap Progress</span>
                         <span className="font-medium">{progressPercentage}%</span>
                       </div>
                       <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
-                        <motion.div 
+                        <motion.div
                           className={`h-full rounded-full ${palette.progress}`}
                           initial={{ width: 0 }}
                           animate={{ width: `${progressPercentage}%` }}
@@ -582,8 +580,8 @@ export default function Expert() {
                       </h3>
                       <div className="space-y-3">
                         {planSteps.map((st, i) => (
-                          <motion.div 
-                            key={st.id} 
+                          <motion.div
+                            key={st.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
@@ -603,7 +601,7 @@ export default function Expert() {
                             <div className="flex items-center gap-2">
                               <div className="text-sm px-2 py-1 rounded bg-gray-700/50">{st.weeks}w</div>
                               <div className="w-16 h-2 bg-gray-700 rounded-full overflow-hidden">
-                                <motion.div 
+                                <motion.div
                                   className="h-full rounded-full bg-gradient-to-r from-blue-400 to-cyan-400"
                                   initial={{ width: 0 }}
                                   animate={{ width: `${Math.min(100, (completedWeeks / st.weeks) * 100)}%` }}
@@ -645,7 +643,7 @@ export default function Expert() {
 
                     <AnimatePresence>
                       {showExport && (
-                        <motion.pre 
+                        <motion.pre
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
@@ -660,9 +658,9 @@ export default function Expert() {
               </AnimatePresence>
             </motion.div>
 
-            {/* SuperBadges 区域 */}
-            <motion.div 
-              layout 
+
+            <motion.div
+              layout
               className="mt-6 rounded-2xl p-6 shadow-xl ${palette.card} border ${palette.border}"
             >
               <div className="flex items-center justify-between mb-6">
@@ -679,8 +677,8 @@ export default function Expert() {
                     key={b.id}
                     layout
                     initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ 
-                      scale: b.earned ? 1 : 0.95, 
+                    animate={{
+                      scale: b.earned ? 1 : 0.95,
                       opacity: b.earned ? 1 : 0.6,
                       y: b.earned ? 0 : 5
                     }}
@@ -688,7 +686,7 @@ export default function Expert() {
                     className={`p-4 rounded-xl border ${palette.border} ${b.earned ? "bg-gradient-to-br from-gray-800/50 to-gray-900/50" : "bg-gray-800/30"}`}
                   >
                     <div className="flex items-start gap-3">
-                      <motion.div 
+                      <motion.div
                         whileHover={{ rotate: 10 }}
                         className={`p-2 rounded-full ${b.earned ? "bg-gradient-to-r from-yellow-500 to-orange-500 text-white" : "bg-gray-700 text-gray-500"}`}
                       >
@@ -699,9 +697,9 @@ export default function Expert() {
                         <div className="text-sm text-gray-400 mt-1">{b.description}</div>
                       </div>
                     </div>
-                    
+
                     {b.earned && (
-                      <motion.div 
+                      <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: "100%" }}
                         className="h-1 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full mt-3"
@@ -743,10 +741,9 @@ export default function Expert() {
             </motion.div>
           </div>
 
-          {/* 右侧市场信号区域 */}
           <div className="col-span-1 lg:col-span-5">
-            <motion.div 
-              layout 
+            <motion.div
+              layout
               className={`rounded-2xl p-6 shadow-xl h-full ${palette.card} border ${palette.border} sticky top-6`}
             >
               <div className="flex items-center justify-between mb-6">
@@ -757,7 +754,7 @@ export default function Expert() {
                 <div className="text-xs text-gray-400">Auto-updated weekly</div>
               </div>
 
-              {/* 标签页 */}
+
               <div className="flex border-b border-gray-700 mb-6">
                 {["profile", "roadmap", "market"].map((tab) => (
                   <motion.button
@@ -765,13 +762,12 @@ export default function Expert() {
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setActiveTab(tab as any)}
-                    className={`px-4 py-2 text-sm font-medium relative ${
-                      activeTab === tab ? "text-purple-400" : "text-gray-400"
-                    }`}
+                    className={`px-4 py-2 text-sm font-medium relative ${activeTab === tab ? "text-purple-400" : "text-gray-400"
+                      }`}
                   >
                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
                     {activeTab === tab && (
-                      <motion.div 
+                      <motion.div
                         layoutId="activeTab"
                         className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-pink-500"
                       />
@@ -805,11 +801,10 @@ export default function Expert() {
                               <div className="font-medium">{t.name}</div>
                               <div className="text-sm text-gray-400">Momentum: {t.delta > 0 ? '+' : ''}{t.delta}%</div>
                             </div>
-                            <div className={`text-sm px-2 py-1 rounded ${
-                              user.skills.some((s) => s.name.toLowerCase() === t.name.toLowerCase())
-                                ? "bg-green-900/30 text-green-400"
-                                : "bg-gray-700/50 text-gray-400"
-                            }`}>
+                            <div className={`text-sm px-2 py-1 rounded ${user.skills.some((s) => s.name.toLowerCase() === t.name.toLowerCase())
+                              ? "bg-green-900/30 text-green-400"
+                              : "bg-gray-700/50 text-gray-400"
+                              }`}>
                               {user.skills.some((s) => s.name.toLowerCase() === t.name.toLowerCase()) ? "In profile" : "Not in profile"}
                             </div>
                           </motion.div>
@@ -833,11 +828,10 @@ export default function Expert() {
                               <div className="font-medium">{r}</div>
                               <div className="text-sm text-gray-400">Median: {s} LPA</div>
                             </div>
-                            <div className={`text-sm px-2 py-1 rounded ${
-                              r === user.goalRole
-                                ? "bg-purple-900/30 text-purple-400"
-                                : "bg-gray-700/50 text-gray-400"
-                            }`}>
+                            <div className={`text-sm px-2 py-1 rounded ${r === user.goalRole
+                              ? "bg-purple-900/30 text-purple-400"
+                              : "bg-gray-700/50 text-gray-400"
+                              }`}>
                               {r === user.goalRole ? "Target" : ""}
                             </div>
                           </motion.div>
@@ -862,12 +856,12 @@ export default function Expert() {
                           <div className="text-sm text-gray-400 mb-1">Current Role</div>
                           <div className="font-medium">{user.currentTitle || "Not specified"}</div>
                         </div>
-                        
+
                         <div className={`p-4 rounded-lg border ${palette.border}`}>
                           <div className="text-sm text-gray-400 mb-1">Experience</div>
                           <div className="font-medium">{user.yearsExperience || 0} years</div>
                         </div>
-                        
+
                         <div className={`p-4 rounded-lg border ${palette.border}`}>
                           <div className="text-sm text-gray-400 mb-1">Top Skills</div>
                           <div className="flex flex-wrap gap-2 mt-2">
@@ -898,12 +892,12 @@ export default function Expert() {
                           <div className="text-sm text-gray-400 mb-1">Total Duration</div>
                           <div className="font-medium">{totalWeeks} weeks</div>
                         </div>
-                        
+
                         <div className={`p-4 rounded-lg border ${palette.border}`}>
                           <div className="text-sm text-gray-400 mb-1">Skills to Learn</div>
                           <div className="font-medium">{planSteps.length - 1} skills</div>
                         </div>
-                        
+
                         <div className={`p-4 rounded-lg border ${palette.border}`}>
                           <div className="text-sm text-gray-400 mb-1">Estimated Completion</div>
                           <div className="font-medium">
@@ -977,8 +971,8 @@ export default function Expert() {
               </div>
             </motion.div>
 
-            <motion.div 
-              layout 
+            <motion.div
+              layout
               className="mt-6 rounded-2xl p-5 shadow-xl ${palette.card} border ${palette.border}"
             >
               <h4 className="font-bold mb-3 flex items-center gap-2">

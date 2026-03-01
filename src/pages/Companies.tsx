@@ -10,82 +10,82 @@ const companies = [
   {
     id: 1,
     name: "Mozilla",
-    logo: "🦊",
     description: "Building the open web with Firefox and related tools",
     githubUrl: "https://github.com/mozilla",
     techStacks: ["Rust", "JavaScript", "C++", "Python"],
     gsocYears: ["2024", "2023", "2022", "2021"],
-    projects: 15
+    projects: 15,
+    color: "from-orange-500/20 to-red-500/10",
   },
   {
     id: 2,
     name: "TensorFlow",
-    logo: "🧠",
     description: "Open-source machine learning framework by Google",
     githubUrl: "https://github.com/tensorflow",
     techStacks: ["Python", "C++", "JavaScript"],
     gsocYears: ["2024", "2023", "2022"],
-    projects: 12
+    projects: 12,
+    color: "from-amber-500/20 to-orange-500/10",
   },
   {
     id: 3,
     name: "Kubernetes",
-    logo: "☸️",
     description: "Container orchestration platform",
     githubUrl: "https://github.com/kubernetes",
     techStacks: ["Go", "Python", "Shell"],
     gsocYears: ["2024", "2023", "2022", "2021"],
-    projects: 20
+    projects: 20,
+    color: "from-blue-500/20 to-cyan-500/10",
   },
   {
     id: 4,
     name: "Apache Software Foundation",
-    logo: "🪶",
     description: "Supporting open-source software projects",
     githubUrl: "https://github.com/apache",
     techStacks: ["Java", "Python", "C++", "Scala"],
     gsocYears: ["2024", "2023", "2022", "2021", "2020"],
-    projects: 50
+    projects: 50,
+    color: "from-red-500/20 to-rose-500/10",
   },
   {
     id: 5,
     name: "Python Software Foundation",
-    logo: "🐍",
     description: "Advancing Python and its ecosystem",
     githubUrl: "https://github.com/python",
     techStacks: ["Python", "C"],
     gsocYears: ["2024", "2023", "2022", "2021"],
-    projects: 18
+    projects: 18,
+    color: "from-yellow-500/20 to-blue-500/10",
   },
   {
     id: 6,
     name: "CNCF",
-    logo: "☁️",
     description: "Cloud Native Computing Foundation projects",
     githubUrl: "https://github.com/cncf",
     techStacks: ["Go", "Rust", "JavaScript", "Python"],
     gsocYears: ["2024", "2023", "2022"],
-    projects: 25
+    projects: 25,
+    color: "from-sky-500/20 to-blue-500/10",
   },
   {
     id: 7,
     name: "Wikimedia Foundation",
-    logo: "📖",
     description: "Maintaining Wikipedia and sister projects",
     githubUrl: "https://github.com/wikimedia",
     techStacks: ["PHP", "JavaScript", "Python"],
     gsocYears: ["2024", "2023", "2022", "2021", "2020"],
-    projects: 22
+    projects: 22,
+    color: "from-emerald-500/20 to-teal-500/10",
   },
   {
     id: 8,
     name: "Git",
-    logo: "📦",
     description: "Distributed version control system",
     githubUrl: "https://github.com/git",
     techStacks: ["C", "Shell", "Perl"],
     gsocYears: ["2024", "2023", "2022"],
-    projects: 8
+    projects: 8,
+    color: "from-violet-500/20 to-purple-500/10",
   }
 ];
 
@@ -97,41 +97,42 @@ const Companies = () => {
 
   const filteredCompanies = companies.filter(company => {
     const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         company.description.toLowerCase().includes(searchTerm.toLowerCase());
+      company.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStack = !selectedStack || company.techStacks.includes(selectedStack);
     return matchesSearch && matchesStack;
   });
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
-      <div className="container mx-auto">
-        <div className="mb-12 animate-fade-in">
-          <Link to="/" className="text-sm text-muted-foreground hover:text-primary mb-4 inline-flex items-center">
+      <div className="container mx-auto max-w-6xl">
+        <div className="mb-10">
+          <Link to="/" className="text-sm text-white/40 hover:text-white/70 mb-6 inline-flex items-center transition-colors">
             ← Back to Home
           </Link>
-          <h1 className="text-5xl font-bold mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
             GSOC <span className="text-gradient">Organizations</span>
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mb-8">
+          <p className="text-lg text-white/40 max-w-2xl mb-8">
             Explore organizations participating in GSOC. Filter by tech stack to find companies matching your skills.
           </p>
 
-          {/* Search */}
           <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
             <Input
               placeholder="Search organizations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-white/[0.04] border-white/10 text-white placeholder:text-white/20 rounded-xl h-11"
             />
           </div>
 
-          {/* Tech Stack Filter */}
           <div className="flex flex-wrap gap-2 mb-8">
             <Badge
               variant={selectedStack === null ? "default" : "outline"}
-              className="cursor-pointer"
+              className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${selectedStack === null
+                  ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                  : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
+                }`}
               onClick={() => setSelectedStack(null)}
             >
               All Stacks
@@ -140,7 +141,10 @@ const Companies = () => {
               <Badge
                 key={stack}
                 variant={selectedStack === stack ? "default" : "outline"}
-                className="cursor-pointer"
+                className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${selectedStack === stack
+                    ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                    : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
+                  }`}
                 onClick={() => setSelectedStack(stack)}
               >
                 {stack}
@@ -149,60 +153,61 @@ const Companies = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredCompanies.map((company, idx) => (
             <Card
               key={company.id}
-              className="p-6 border-border bg-card hover-lift card-glow"
-              style={{ animationDelay: `${idx * 0.1}s` }}
+              className="group p-6 glass hover:bg-white/[0.06] rounded-2xl transition-all duration-500 relative overflow-hidden"
             >
-              <div className="flex items-start gap-4 mb-4">
-                <div className="text-4xl">{company.logo}</div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-1">{company.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {company.projects} active projects
-                  </p>
+              <div className={`absolute inset-0 bg-gradient-to-br ${company.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+
+              <div className="relative z-10">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center text-lg font-bold text-white/70">
+                    {company.name.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold mb-0.5">{company.name}</h3>
+                    <p className="text-xs text-white/40">{company.projects} active projects</p>
+                  </div>
                 </div>
-              </div>
 
-              <p className="text-sm text-muted-foreground mb-4">
-                {company.description}
-              </p>
+                <p className="text-sm text-white/50 mb-4 leading-relaxed">{company.description}</p>
 
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-2">Tech Stack:</p>
-                <div className="flex flex-wrap gap-2">
-                  {company.techStacks.map(tech => (
-                    <Badge key={tech} variant="secondary" className="text-xs">
-                      {tech}
-                    </Badge>
-                  ))}
+                <div className="mb-4">
+                  <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wider font-medium">Tech Stack</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {company.techStacks.map(tech => (
+                      <Badge key={tech} variant="secondary" className="text-[10px] bg-white/[0.06] text-white/60 border-0 rounded-md px-2 py-0.5">
+                        {tech}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-2">GSOC Participation:</p>
-                <div className="flex flex-wrap gap-2">
-                  {company.gsocYears.map(year => (
-                    <Badge key={year} variant="outline" className="text-xs border-primary/30">
-                      {year}
-                    </Badge>
-                  ))}
+                <div className="mb-5">
+                  <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wider font-medium">GSOC Participation</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {company.gsocYears.map(year => (
+                      <Badge key={year} variant="outline" className="text-[10px] border-violet-500/20 text-violet-400/70 rounded-md px-2 py-0.5">
+                        {year}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" asChild>
-                  <a href={company.githubUrl} target="_blank" rel="noopener noreferrer">
-                    <Github className="mr-2 h-4 w-4" />
-                    GitHub
-                  </a>
-                </Button>
-                <Button className="flex-1">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Projects
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-white/80 rounded-xl h-9 text-sm" asChild>
+                    <a href={company.githubUrl} target="_blank" rel="noopener noreferrer">
+                      <Github className="mr-1.5 h-3.5 w-3.5" />
+                      GitHub
+                    </a>
+                  </Button>
+                  <Button className="flex-1 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border-0 rounded-xl h-9 text-sm">
+                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                    Projects
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
