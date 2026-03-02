@@ -1,4 +1,4 @@
-// index.ts - Version 16 (Gemini + GitHub + YouTube enrichment, Deno edge function)
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // CORS headers
