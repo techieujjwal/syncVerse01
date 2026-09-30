@@ -13,6 +13,7 @@ import Programs from "./pages/Programs";
 import Companies from "./pages/Companies";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/Loginpage";
+import ResetPassword from "./pages/ResetPassword";
 import ExpertPage from "./pages/experts";
 import Premium from "./pages/Premium";
 import AiHelp from "./pages/aihelp";
@@ -35,6 +36,7 @@ const App = () => {
               <Route path="/programs" element={<Programs />} />
               <Route path="/companies" element={<Companies />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/experts" element={<ProtectedRoute><ExpertPage /></ProtectedRoute>} />
               <Route path="/aihelp" element={<ProtectedRoute><AiHelp /></ProtectedRoute>} />
               <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />

@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (contain secrets)
+.env
+.env.*
+!.env.example
+
+# Supabase CLI temp files
+supabase/.temp/
+
+# Audit helper scripts
+scripts/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

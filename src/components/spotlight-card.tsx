@@ -1,6 +1,30 @@
 import React, { useEffect, useRef } from 'react';
 
-export const GlowCard = ({
+type GlowCardProps = {
+  children?: React.ReactNode;
+  className?: string;
+  glowColor?: keyof typeof glowColorMap;
+  size?: keyof typeof sizeMap;
+  width?: number | string;
+  height?: number | string;
+  customSize?: boolean;
+};
+
+const glowColorMap = {
+  blue: { base: 220, spread: 200 },
+  purple: { base: 280, spread: 300 },
+  green: { base: 120, spread: 200 },
+  red: { base: 0, spread: 200 },
+  orange: { base: 30, spread: 200 }
+};
+
+const sizeMap = {
+  sm: 'w-48 h-64',
+  md: 'w-64 h-80',
+  lg: 'w-80 h-96'
+};
+
+export const GlowCard: React.FC<GlowCardProps> = ({
   children,
   className = '',
   glowColor = 'blue',
@@ -9,25 +33,11 @@ export const GlowCard = ({
   height,
   customSize = false
 }) => {
-  const cardRef = useRef(null);
-  const innerRef = useRef(null);
-
-  const glowColorMap = {
-    blue: { base: 220, spread: 200 },
-    purple: { base: 280, spread: 300 },
-    green: { base: 120, spread: 200 },
-    red: { base: 0, spread: 200 },
-    orange: { base: 30, spread: 200 }
-  };
-
-  const sizeMap = {
-    sm: 'w-48 h-64',
-    md: 'w-64 h-80',
-    lg: 'w-80 h-96'
-  };
+  const cardRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const syncPointer = (e) => {
+    const syncPointer = (e: PointerEvent) => {
       const { clientX: x, clientY: y } = e;
       if (cardRef.current) {
         cardRef.current.style.setProperty('--x', x.toFixed(2));
@@ -47,8 +57,8 @@ export const GlowCard = ({
     return sizeMap[size];
   };
 
-  const getInlineStyles = () => {
-    const baseStyles = {
+  const getInlineStyles = (): React.CSSProperties => {
+    const baseStyles: React.CSSProperties & Record<string, string | number> = {
       '--base': base,
       '--spread': spread,
       '--radius': '14',

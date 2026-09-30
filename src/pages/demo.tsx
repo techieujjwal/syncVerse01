@@ -12,23 +12,25 @@ import { ChevronDown, ChevronUp, Loader2, Sparkles, Users, Mail } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+type Peer = { id: number; name: string; city: string; email: string; topic: string };
+type Week = { week: string; title: string; details: string[]; completed: boolean; projectLink: string };
+
+const PEERS: Peer[] = [
+  { id: 1, name: "Priya Sharma", city: "Mumbai", email: "priya@email.com", topic: "machine learning" },
+  { id: 2, name: "Rohan Mehta", city: "Delhi", email: "rohan@email.com", topic: "web development" },
+  { id: 3, name: "Ananya Verma", city: "Bangalore", email: "ananya@email.com", topic: "AI" },
+];
+
 export default function ShootingStarsDemo() {
-  const [view, setView] = useState("home");
+  const [view, setView] = useState<"home" | "generate" | "progress" | "peers">("home");
   const [topic, setTopic] = useState("");
   const [currentKnowledge, setCurrentKnowledge] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [parsedRoadmap, setParsedRoadmap] = useState([]);
+  const [parsedRoadmap, setParsedRoadmap] = useState<Week[]>([]);
   const [progress, setProgress] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const [matchedPeers, setMatchedPeers] = useState([]);
+  const [matchedPeers, setMatchedPeers] = useState<Peer[]>([]);
   const { toast } = useToast();
-
-  // Dummy peers
-  const peers = [
-    { id: 1, name: "Priya Sharma", city: "Mumbai", email: "priya@email.com", topic: "machine learning" },
-    { id: 2, name: "Rohan Mehta", city: "Delhi", email: "rohan@email.com", topic: "web development" },
-    { id: 3, name: "Ananya Verma", city: "Bangalore", email: "ananya@email.com", topic: "AI" },
-  ];
 
   useEffect(() => {
     if (!topic.trim()) {
@@ -36,14 +38,14 @@ export default function ShootingStarsDemo() {
       return;
     }
     const t = topic.toLowerCase();
-    setMatchedPeers(peers.filter(p => p.topic.toLowerCase().includes(t)));
+    setMatchedPeers(PEERS.filter((p) => p.topic.toLowerCase().includes(t)));
   }, [topic]);
 
-  const parseWeeks = (text) => {
+  const parseWeeks = (text: string): Week[] => {
     const lines = text.split("\n");
-    const weeks = [];
-    let currentWeek = null;
-    lines.forEach(line => {
+    const weeks: Week[] = [];
+    let currentWeek: Week | null = null;
+    lines.forEach((line) => {
       const match = line.match(/week\s*(\d+):?\s*(.*)/i);
       if (match) {
         if (currentWeek) weeks.push(currentWeek);
@@ -67,8 +69,9 @@ export default function ShootingStarsDemo() {
         body: { topic, currentKnowledge },
       });
       if (error) throw error;
-      const roadmap = parseWeeks(data.roadmap);
-      setParsedRoadmap(roadmap);
+      const roadmapText =
+        typeof data?.roadmap === "string" ? data.roadmap : JSON.stringify(data ?? {});
+      setParsedRoadmap(parseWeeks(roadmapText));
       toast({ title: "Roadmap created!", description: "Scroll down to view your weekly plan 🚀" });
     } catch (err) {
       console.error(err);
@@ -78,14 +81,14 @@ export default function ShootingStarsDemo() {
     }
   };
 
-  const toggleWeekCompletion = (i) =>
-    setParsedRoadmap(prev => prev.map((w, idx) => (idx === i ? { ...w, completed: !w.completed } : w)));
+  const toggleWeekCompletion = (i: number) =>
+    setParsedRoadmap((prev) => prev.map((w, idx) => (idx === i ? { ...w, completed: !w.completed } : w)));
 
-  const handleProjectLinkChange = (i, v) =>
-    setParsedRoadmap(prev => prev.map((w, idx) => (idx === i ? { ...w, projectLink: v } : w)));
+  const handleProjectLinkChange = (i: number, v: string) =>
+    setParsedRoadmap((prev) => prev.map((w, idx) => (idx === i ? { ...w, projectLink: v } : w)));
 
   useEffect(() => {
-    const completed = parsedRoadmap.filter(w => w.completed).length;
+    const completed = parsedRoadmap.filter((w) => w.completed).length;
     if (parsedRoadmap.length > 0) setProgress((completed / parsedRoadmap.length) * 100);
   }, [parsedRoadmap]);
 
@@ -105,21 +108,36 @@ export default function ShootingStarsDemo() {
           </p>
         </div>
 
-        <div className="flex gap-10 relative z-10">
-          <div onClick={() => setView("generate")}>
-            <GlowCard title="Generate Roadmap" description="Create your AI learning path" />
-          </div>
-          <div onClick={() => setView("progress")}>
-            <GlowCard title="Progress Tracker" description="Track weekly roadmap progress" />
-          </div>
-          <div onClick={() => setView("peers")}>
-            <GlowCard title="Peer Connect" description="Find people learning like you" />
-          </div>
+        <div className="flex flex-wrap justify-center gap-10 relative z-10">
+          <button onClick={() => setView("generate")} className="cursor-pointer">
+            <GlowCard aria-hidden>
+              <div className="text-white">
+                <div className="font-semibold">Generate Roadmap</div>
+                <div className="text-sm text-gray-400">Create your AI learning path</div>
+              </div>
+            </GlowCard>
+          </button>
+          <button onClick={() => setView("progress")} className="cursor-pointer">
+            <GlowCard>
+              <div className="text-white">
+                <div className="font-semibold">Progress Tracker</div>
+                <div className="text-sm text-gray-400">Track weekly roadmap progress</div>
+              </div>
+            </GlowCard>
+          </button>
+          <button onClick={() => setView("peers")} className="cursor-pointer">
+            <GlowCard>
+              <div className="text-white">
+                <div className="font-semibold">Peer Connect</div>
+                <div className="text-sm text-gray-400">Find people learning like you</div>
+              </div>
+            </GlowCard>
+          </button>
         </div>
 
         {/* Shooting Stars BG */}
         <ShootingStars starColor="#FF00E5" trailColor="#00D1FF" minSpeed={15} maxSpeed={35} minDelay={1000} maxDelay={3000} />
-        <style jsx>{`
+        <style>{`
           .stars {
             background-image:
               radial-gradient(2px 2px at 20px 30px, #eee, transparent),

@@ -42,7 +42,7 @@ export type Database = {
           topic_key: string
           topic_display: string
           is_premium: boolean
-          content: any
+          content: unknown
           created_at: string
         }
         Insert: {
@@ -50,7 +50,7 @@ export type Database = {
           topic_key: string
           topic_display: string
           is_premium?: boolean
-          content: any
+          content: unknown
           created_at?: string
         }
         Update: {
@@ -58,7 +58,7 @@ export type Database = {
           topic_key?: string
           topic_display?: string
           is_premium?: boolean
-          content?: any
+          content?: unknown
           created_at?: string
         }
         Relationships: []

@@ -15,7 +15,9 @@ type BasicTopic = {
   completed?: boolean | number | string;
 };
 
-const safeNumber = (v: any, fallback = NaN) => {
+type ProgressItem = BasicTopic & { done?: unknown; finished?: unknown };
+
+const safeNumber = (v: unknown, fallback = NaN) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 };
@@ -64,7 +66,7 @@ const Index = () => {
           const parsed = JSON.parse(basicRaw);
           if (Array.isArray(parsed) && parsed.length > 0) {
             const total = parsed.length;
-            const completed = parsed.reduce((acc: number, item: any) => {
+            const completed = parsed.reduce((acc: number, item: ProgressItem) => {
               if (item && ("completed" in item)) {
                 return acc + (item.completed ? 1 : 0);
               }
@@ -77,16 +79,20 @@ const Index = () => {
             return;
           }
         } catch {
+          // Malformed basicRoadmapProgress — fall through to other sources.
         }
       }
 
-      const fallbackP = safeNumber(pRaw);
-      if (!Number.isNaN(fallbackP)) {
-        setFreeProgress(Math.max(0, Math.min(100, Math.round(fallbackP))));
-      } else {
-        setFreeProgress((prev) => prev ?? 42);
+      // Only override the default when a value was actually stored.
+      // Number(null) === 0, so an unguarded read would show 0% for new users.
+      if (pRaw !== null) {
+        const fallbackP = safeNumber(pRaw);
+        if (!Number.isNaN(fallbackP)) {
+          setFreeProgress(Math.max(0, Math.min(100, Math.round(fallbackP))));
+        }
       }
     } catch (err) {
+      // localStorage unavailable (e.g. privacy mode) — keep defaults.
     }
   };
 
@@ -116,7 +122,7 @@ const Index = () => {
       const weeks = JSON.parse(raw);
       if (Array.isArray(weeks) && weeks.length > 0) {
         const total = weeks.length;
-        const completed = weeks.filter((w: any) => !!w?.completed).length;
+        const completed = weeks.filter((w: { completed?: unknown }) => !!w?.completed).length;
         setPremiumTotal(total);
         setPremiumCompleted(completed);
         setPremiumProgress(total > 0 ? Math.round((completed / total) * 100) : 0);
@@ -126,13 +132,13 @@ const Index = () => {
         setPremiumProgress(0);
       }
     } catch (err) {
+      // Malformed premiumWeeks — keep the fallback progress values.
     }
   };
 
   useEffect(() => {
     computeFreeFromStorage();
     computePremiumFromStorage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -163,7 +169,6 @@ const Index = () => {
       window.removeEventListener("premiumWeeksUpdated", onPremiumUpdated);
       window.removeEventListener("basicRoadmapUpdated", onBasicUpdated);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => {

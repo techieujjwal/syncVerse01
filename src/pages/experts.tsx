@@ -51,7 +51,7 @@ function mockMarketData() {
 
 
 function forecastSalary(user: UserProfile, market: ReturnType<typeof mockMarketData>) {
-  let base = user.currentSalaryLPA || 0;
+  const base = user.currentSalaryLPA || 0;
   const expFactor = clamp((user.yearsExperience || 0) / 5, 0, 2);
   const skillScore = user.skills.reduce((s, sk) => s + sk.proficiency, 0) / (user.skills.length || 1);
   const trendingBonus = user.skills
@@ -158,7 +158,9 @@ export default function Expert() {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("expert_profile") : null;
       if (raw) return JSON.parse(raw) as UserProfile;
-    } catch (e) { }
+    } catch {
+      // Corrupted expert_profile — fall back to the default profile below.
+    }
     return {
       id: uid("user"),
       name: "",
@@ -181,7 +183,9 @@ export default function Expert() {
   useEffect(() => {
     try {
       localStorage.setItem("expert_profile", JSON.stringify(user));
-    } catch (e) { }
+    } catch {
+      // localStorage unavailable — profile just won't persist.
+    }
   }, [user]);
 
   const salaryForecast = useMemo(() => forecastSalary(user, market), [user, market]);
@@ -661,7 +665,7 @@ export default function Expert() {
 
             <motion.div
               layout
-              className="mt-6 rounded-2xl p-6 shadow-xl ${palette.card} border ${palette.border}"
+              className={`mt-6 rounded-2xl p-6 shadow-xl ${palette.card} border ${palette.border}`}
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold flex items-center gap-2">
@@ -761,7 +765,7 @@ export default function Expert() {
                     key={tab}
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setActiveTab(tab as any)}
+                    onClick={() => setActiveTab(tab as "profile" | "roadmap" | "market")}
                     className={`px-4 py-2 text-sm font-medium relative ${activeTab === tab ? "text-purple-400" : "text-gray-400"
                       }`}
                   >
@@ -973,7 +977,7 @@ export default function Expert() {
 
             <motion.div
               layout
-              className="mt-6 rounded-2xl p-5 shadow-xl ${palette.card} border ${palette.border}"
+              className={`mt-6 rounded-2xl p-5 shadow-xl ${palette.card} border ${palette.border}`}
             >
               <h4 className="font-bold mb-3 flex items-center gap-2">
                 <Star className="text-yellow-400" />

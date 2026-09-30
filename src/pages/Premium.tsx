@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,11 +28,10 @@ import { ShootingStars } from "@/components/ui/shooting-stars";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getCachedRoadmap, saveRoadmapToCache } from "@/lib/roadmapCache";
+import { parseRoadmapData, extractRoadmapText, normalize, type Week } from "@/lib/roadmapParser";
+import { getEdgeErrorMessage } from "@/lib/edgeErrors";
 
 const fadeUp = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
-
-const normalize = (text: string) =>
-  text ? text.toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim() : "";
 
 const premiumPeers = [
   { id: 1, name: "Priya Sharma", city: "Mumbai", email: "priya@example.com", topic: "frontend react", lastActive: "5 hours ago" },
@@ -40,193 +40,10 @@ const premiumPeers = [
   { id: 4, name: "Harsh Raj", city: "Patna", email: "harsh@example.com", topic: "web development", lastActive: "3 hours ago" },
 ];
 
-type Week = {
-  week: string;
-  title: string;
-  details: string[];
-  repos: string[];
-  projects: string[];
-  youtube: string[];
-  completed: boolean;
-  projectLink: string;
-  reflection: string;
-};
-
-/**
- * parseWeeks: Accepts free text OR JSON-like responses.
- * Enhanced to detect repos/projects/youtube lines in plaintext and also map structured JSON fields.
- */
-const parseWeeks = (text?: string): Week[] => {
-  if (!text || typeof text !== "string") return [];
-
-  const trimmed = text.trim();
-  const topicsToWeeks = (arr: Array<any>) => {
-    return arr.map((s: any, idx: number) => {
-      const title =
-        s.section_title ??
-        s.title ??
-        (typeof s === "string" ? s.substring(0, 60) : `Week ${idx + 1}`);
-      const weekNum =
-        s.week ??
-        (typeof s.section_title === "string" && (s.section_title.match(/week\s*(\d+)/i) || [])[1]) ??
-        String(idx + 1);
-
-      const details = Array.isArray(s.topics)
-        ? s.topics.map((t: any) => String(t))
-        : Array.isArray(s.details)
-          ? s.details.map((d: any) => String(d))
-          : typeof s.topics === "string"
-            ? s.topics.split("\n").map((t: string) => t.trim()).filter(Boolean)
-            : Array.isArray(s.details)
-              ? s.details.map(String)
-              : [];
-      const repos = s.repos ?? s.github ?? s.repo ?? [];
-      const projects = s.projects ?? s.projectIdeas ?? s.tasks ?? [];
-      const youtube = s.youtube ?? s.playlists ?? s.videos ?? [];
-
-      return {
-        week: String(weekNum),
-        title: String(title),
-        details,
-        repos: Array.isArray(repos) ? repos.map(String) : typeof repos === "string" ? repos.split(",").map((r: string) => r.trim()).filter(Boolean) : [],
-        projects: Array.isArray(projects) ? projects.map(String) : typeof projects === "string" ? projects.split(",").map((p: string) => p.trim()).filter(Boolean) : [],
-        youtube: Array.isArray(youtube) ? youtube.map(String) : typeof youtube === "string" ? youtube.split(",").map((y: string) => y.trim()).filter(Boolean) : [],
-        completed: false,
-        projectLink: "",
-        reflection: "",
-      } as Week;
-    });
-  };
-  if (/^[\[{]/.test(trimmed) || /"sections"\s*:|"\bweeks\b"\s*:|"repos"\s*:|"projects"\s*:|\"youtube\"/i.test(trimmed)) {
-    let jsonSubstring = trimmed;
-    try {
-      const firstBrace = Math.min(
-        ...["{", "["]
-          .map((c) => {
-            const i = trimmed.indexOf(c);
-            return i === -1 ? Number.MAX_SAFE_INTEGER : i;
-          })
-          .filter((v) => v !== Number.MAX_SAFE_INTEGER)
-      );
-      if (firstBrace > 0 && firstBrace < trimmed.length) {
-        jsonSubstring = trimmed.slice(firstBrace);
-      }
-    } catch {
-      jsonSubstring = trimmed;
-    }
-
-    try {
-      const parsed = JSON.parse(jsonSubstring);
-
-      if (parsed?.sections && Array.isArray(parsed.sections)) {
-        return topicsToWeeks(parsed.sections);
-      }
-
-      if (parsed?.weeks && Array.isArray(parsed.weeks)) {
-        return topicsToWeeks(parsed.weeks);
-      }
-
-      if (Array.isArray(parsed)) {
-        return topicsToWeeks(parsed);
-      }
-
-      if (Array.isArray(parsed?.choices)) {
-        const choice = parsed.choices[0];
-        const content = choice?.message?.content ?? choice?.text;
-        if (typeof content === "string") {
-          return parseWeeks(content);
-        }
-      }
-
-      const maybeArray =
-        parsed?.result ?? parsed?.data ?? parsed?.text ?? parsed?.content;
-      if (maybeArray) {
-        if (typeof maybeArray === "string") {
-          try {
-            const inner = JSON.parse(maybeArray);
-            if (Array.isArray(inner)) return topicsToWeeks(inner);
-            return parseWeeks(inner && typeof inner === "string" ? inner : JSON.stringify(inner));
-          } catch {
-          }
-        } else if (Array.isArray(maybeArray)) {
-          return topicsToWeeks(maybeArray);
-        }
-      }
-    } catch (err) {
-      console.warn("parseWeeks JSON parse failed (premium), falling back to text parsing:", err);
-    }
-  }
-  const lines = trimmed.split("\n");
-  const weeks: Week[] = [];
-  let currentWeek: Week | null = null;
-
-  const pushCurrent = () => {
-    if (currentWeek) weeks.push(currentWeek);
-    currentWeek = null;
-  };
-
-  lines.forEach((rawLine) => {
-    const line = rawLine.trim();
-    const weekMatch = line.match(/week\s*(\d+)\s*[:\-\.]?\s*(.*)/i);
-    if (weekMatch) {
-      if (currentWeek) pushCurrent();
-      currentWeek = {
-        week: weekMatch[1],
-        title: (weekMatch[2] || `Week ${weekMatch[1]}`).trim(),
-        details: [],
-        repos: [],
-        projects: [],
-        youtube: [],
-        completed: false,
-        projectLink: "",
-        reflection: "",
-      };
-      return;
-    }
-
-    if (!currentWeek && line) {
-      currentWeek = {
-        week: String(weeks.length + 1),
-        title: line,
-        details: [],
-        repos: [],
-        projects: [],
-        youtube: [],
-        completed: false,
-        projectLink: "",
-        reflection: "",
-      };
-      pushCurrent();
-      return;
-    }
-
-    if (currentWeek && line) {
-      if (/^(repos?:|github:)/i.test(line)) {
-        const rest = line.replace(/^(repos?:|github:)\s*/i, "");
-        const parts = rest.split(/,|;|\||\band\b/).map((p) => p.trim()).filter(Boolean);
-        currentWeek.repos.push(...parts);
-      } else if (/^(projects?:|project ideas:)/i.test(line)) {
-        const rest = line.replace(/^(projects?:|project ideas:)\s*/i, "");
-        const parts = rest.split(/,|;|\||\band\b/).map((p) => p.trim()).filter(Boolean);
-        currentWeek.projects.push(...parts);
-      } else if (/^(youtube:|playlists?:|videos?:)/i.test(line)) {
-        const rest = line.replace(/^(youtube:|playlists?:|videos?:)\s*/i, "");
-        const parts = rest.split(/,|;|\||\band\b/).map((p) => p.trim()).filter(Boolean);
-        currentWeek.youtube.push(...parts);
-      } else {
-        const cleaned = line.replace(/^[\-\*\•]\s*/, "").trim();
-        if (cleaned) currentWeek.details.push(cleaned);
-      }
-    }
-  });
-  if (currentWeek) pushCurrent();
-
-  return weeks;
-};
-
 const Premium = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [topic, setTopic] = useState("");
   const [currentKnowledge, setCurrentKnowledge] = useState("");
@@ -246,7 +63,9 @@ const Premium = () => {
     if (saved) {
       try {
         setWeeks(JSON.parse(saved));
-      } catch { }
+      } catch {
+        // Corrupted persisted weeks — start from a clean slate.
+      }
     }
   }, []);
 
@@ -264,7 +83,9 @@ const Premium = () => {
     } else {
       try {
         localStorage.removeItem("premiumWeeks");
-      } catch { }
+      } catch {
+        // Storage unavailable — progress reset still applies in-memory.
+      }
       setProgress(0);
     }
   }, [weeks]);
@@ -301,7 +122,7 @@ const Premium = () => {
     try {
       const cached = await getCachedRoadmap(topic, true);
       if (cached) {
-        const cachedWeeks = parseWeeks(cached);
+        const cachedWeeks = parseRoadmapData(cached);
         if (cachedWeeks.length > 0) {
           setWeeks(cachedWeeks);
           toast({ title: "Roadmap loaded", description: "Found a cached premium roadmap for this topic." });
@@ -310,63 +131,21 @@ const Premium = () => {
         }
       }
 
+      toast({
+        title: "Generating your premium roadmap",
+        description: "The AI is building a deeper plan with repos and playlists — this takes 10–30 seconds.",
+      });
+
       const { data, error } = await supabase.functions.invoke("generate-roadmap", {
         body: { topic, currentKnowledge, premium: true },
       });
 
-      console.log("Supabase response:", { data, error });
-      if (error) throw error;
+      if (error) throw new Error(await getEdgeErrorMessage(error));
 
-      let maybe: any = data;
-      if (typeof maybe === "string") {
-        try {
-          maybe = JSON.parse(maybe);
-        } catch {
-        }
-      }
-      const candidates = [
-        maybe?.roadmap,
-        maybe?.result,
-        maybe?.text,
-        maybe?.data,
-        maybe,
-      ];
-
-      let text: string | undefined;
-      for (const c of candidates) {
-        if (!c) continue;
-        if (typeof c === "string" && c.trim()) {
-          text = c;
-          break;
-        }
-        if (typeof c === "object") {
-          if (typeof c.content === "string" && c.content.trim()) {
-            text = c.content;
-            break;
-          }
-          if (Array.isArray((c as any).choices)) {
-            const choice = (c as any).choices[0];
-            const msg = choice?.message?.content || choice?.text;
-            if (typeof msg === "string" && msg.trim()) {
-              text = msg;
-              break;
-            }
-          }
-          if (Array.isArray(c.sections) || Array.isArray(c.weeks) || Array.isArray(c)) {
-            text = typeof c === "string" ? c : JSON.stringify(c);
-            break;
-          }
-        }
-      }
-      if (!text && maybe) {
-        const str = typeof maybe === "string" ? maybe : JSON.stringify(maybe);
-        if (str && str.trim().length > 0) {
-          text = str;
-        }
-      }
+      const text = extractRoadmapText(data);
 
       if (!text) {
-        console.warn("No roadmap text found:", maybe);
+        console.warn("No roadmap text found:", data);
         setRoadmapText("No roadmap returned from backend. Check console logs for Supabase response.");
         toast({
           title: "No roadmap returned",
@@ -378,7 +157,7 @@ const Premium = () => {
 
       setRoadmapText(text);
 
-      let extracted = parseWeeks(text);
+      let extracted = parseRoadmapData(text);
       if (!Array.isArray(extracted) || extracted.length === 0) {
         extracted = Array.from({ length: 6 }).map((_, i) => {
           const title = `${topic} — ${i === 0 ? "Foundations" : i === 1 ? "Core Concepts" : i === 2 ? "Hands-on" : i === 3 ? "Advanced Patterns" : i === 4 ? "Project" : "Wrap-up"}`;
@@ -606,7 +385,19 @@ const Premium = () => {
               </motion.p>
 
               <motion.div variants={fadeUp} className="flex flex-wrap gap-3 items-center mb-8">
-                <Button className="px-6 py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-black">Get Premium Access</Button>
+                <Button
+                  className="px-6 py-3 bg-gradient-to-r from-[#00E5FF] to-[#7C3AED] text-black"
+                  onClick={() =>
+                    toast({
+                      title: "You're on the early-access list ✨",
+                      description: user
+                        ? "Premium features are rolling out in phases — you already have access to the premium roadmap workspace below."
+                        : "Sign in and generate your premium roadmap below — billing arrives with the public launch.",
+                    })
+                  }
+                >
+                  Get Premium Access
+                </Button>
                 <p className="text-xs text-white/60">Early access · Features roll out in phases · Limited seats for serious devs.</p>
               </motion.div>
             </motion.div>

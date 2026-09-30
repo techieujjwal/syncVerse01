@@ -2,3 +2,8 @@ project_id = "gnnuqlgugvnrfsmygcjr"
 
 [functions.generate-roadmap]
 verify_jwt = false
+
+[functions.gemini-explainer]
+# Matches generate-roadmap: auth is enforced in-app via ProtectedRoute; the
+# function itself validates nothing sensitive, so no Supabase JWT is required.
+verify_jwt = false

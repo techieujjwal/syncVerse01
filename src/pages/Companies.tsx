@@ -203,7 +203,16 @@ const Companies = () => {
                       GitHub
                     </a>
                   </Button>
-                  <Button className="flex-1 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border-0 rounded-xl h-9 text-sm">
+                  <Button
+                    className="flex-1 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border-0 rounded-xl h-9 text-sm"
+                    onClick={() =>
+                      window.open(
+                        `https://github.com/${company.githubUrl.split("github.com/")[1] ?? ""}#repositories`,
+                        "_blank",
+                        "noopener,noreferrer"
+                      )
+                    }
+                  >
                     <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                     Projects
                   </Button>

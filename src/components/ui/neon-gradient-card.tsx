@@ -62,7 +62,7 @@ interface NeonGradientCardProps {
    * */
   neonColors?: NeonColorsProps
 
-  [key: string]: any
+  [key: string]: unknown
 }
 
 const NeonGradientCard: React.FC<NeonGradientCardProps> = ({

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, Users, ArrowRight, X, Search } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 type Roadmap = {
   id: number;
@@ -455,6 +456,7 @@ export default function Roadmaps(): JSX.Element {
   const [query, setQuery] = useState("");
   const [stackFilter, setStackFilter] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Roadmap | null>(null);
+  const { toast } = useToast();
 
   const allStacks = useMemo(() => {
     const s = new Set<string>();
@@ -604,9 +606,14 @@ export default function Roadmaps(): JSX.Element {
             <div className="mt-6 flex gap-3">
               <Button
                 className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border-0 rounded-xl"
-                onClick={() => {
+                onClick={async () => {
                   const plain = selected.guide.replace(/<[^>]*>/g, "");
-                  navigator.clipboard.writeText(plain);
+                  try {
+                    await navigator.clipboard.writeText(plain);
+                    toast({ title: "Copied ✅", description: `${selected.title} guide copied to clipboard.` });
+                  } catch {
+                    toast({ title: "Copy failed", description: "Your browser blocked clipboard access.", variant: "destructive" });
+                  }
                 }}
               >
                 Copy Guide

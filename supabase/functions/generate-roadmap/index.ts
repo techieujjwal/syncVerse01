@@ -49,11 +49,11 @@ async function fetchGitHubRepos(topic: string, per_page = 18): Promise<string[]>
       console.warn("GitHub search non-ok", res.status);
       return [];
     }
-    const json = await res.json();
+    const json: { items?: { html_url?: string }[] } | null = await res.json().catch(() => null);
     if (!json?.items || !Array.isArray(json.items)) return [];
 
     // return html_url for top repos
-    return json.items.map((it: any) => it.html_url).filter(Boolean);
+    return json.items.map((it) => it.html_url).filter((u): u is string => Boolean(u));
   } catch (err) {
     console.error("fetchGitHubRepos error", err);
     return [];
@@ -73,11 +73,11 @@ async function fetchYouTubePlaylists(topic: string, maxResults = 8): Promise<str
       console.warn("YouTube API non-ok", res.status);
       return [];
     }
-    const json = await res.json();
+    const json: { items?: { id?: { playlistId?: string } }[] } | null = await res.json().catch(() => null);
     if (!json?.items || !Array.isArray(json.items)) return [];
     const playlists = json.items
-      .map((it: any) => (it.id?.playlistId ? `https://www.youtube.com/playlist?list=${it.id.playlistId}` : null))
-      .filter(Boolean);
+      .map((it) => (it.id?.playlistId ? `https://www.youtube.com/playlist?list=${it.id.playlistId}` : null))
+      .filter((u): u is string => Boolean(u));
     return playlists;
   } catch (err) {
     console.error("fetchYouTubePlaylists error", err);
@@ -85,8 +85,14 @@ async function fetchYouTubePlaylists(topic: string, maxResults = 8): Promise<str
   }
 }
 
+type RoadmapSection = {
+  section_title?: string;
+  weeks_allotted?: number;
+  topics?: unknown;
+};
+
 // Convert sections -> expanded weeks array based on weeks_allotted
-function expandSectionsToWeeks(sections: any[]): { week: number; title: string; details: string[] }[] {
+function expandSectionsToWeeks(sections: RoadmapSection[]): { week: number; title: string; details: string[] }[] {
   const weeksArr: { week: number; title: string; details: string[] }[] = [];
   let weekCounter = 1;
   for (const s of sections) {
@@ -123,24 +129,33 @@ serve(async (req: Request) => {
 
   try {
     // parse request body JSON (topic optional)
-    let body: any = {};
+    let body: Record<string, unknown> = {};
     try {
-      body = await req.json();
+      body = (await req.json()) as Record<string, unknown>;
     } catch {
       body = {};
     }
-    const topic = (body.topic && String(body.topic).trim()) || "frontend development";
+    const topic =
+      typeof body.topic === "string" && body.topic.trim() ? body.topic.trim() : "frontend development";
     const GEMINI_API_KEY_1 = Deno.env.get("GEMINI_API_KEY_1");
-    const MODEL_NAME = Deno.env.get("GEMINI_MODEL") || "gemini-2.0-flash";
+    const MODEL_NAME = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
 
     if (!GEMINI_API_KEY_1) {
-      return new Response(JSON.stringify({ error: "Missing GEMINI_API_KEY_1 secret." }), {
-        status: 500,
-        headers: CORS_HEADERS,
-      });
+      console.error("generate-roadmap: GEMINI_API_KEY_1 secret is not set on this project.");
+      return new Response(
+        JSON.stringify({
+          error:
+            "Roadmap generation is not configured on the server (missing GEMINI_API_KEY_1 secret). " +
+            "Project admin: run `supabase secrets set GEMINI_API_KEY_1=...` and redeploy.",
+        }),
+        { status: 503, headers: CORS_HEADERS }
+      );
     }
 
-    // Build prompt dynamically with provided topic
+    // Build prompt dynamically with provided topic. The premium flag currently
+    // selects the same base roadmap; premium-specific enrichment (repos,
+    // playlists, projects) is applied below either way.
+    const premium = body.premium === true;
     const prompt = `
 You are an expert career coach. Generate a detailed learning roadmap for "${topic}".
 Return ONLY valid JSON that conforms to this schema:
@@ -156,6 +171,7 @@ Return ONLY valid JSON that conforms to this schema:
   ]
 }
 Keep each "topics" entry short (1 line). Provide realistic sections and weeks_allotted that add up to duration_weeks (approx).
+${premium ? "The learner is a premium subscriber: make the plan deeper and more ambitious (8-12 weeks, stretch topics, portfolio-worthy projects)." : "Keep the plan focused and beginner-friendly (4-8 weeks)."}
 `;
 
     // Payload uses generationConfig (as you fixed)
@@ -177,15 +193,35 @@ Keep each "topics" entry short (1 line). Provide realistic sections and weeks_al
       }
     );
 
-    const apiData = await apiRes.json();
+    const apiData: unknown = await apiRes.json().catch(() => null);
+    const apiRecord = apiData && typeof apiData === "object" ? (apiData as Record<string, unknown>) : null;
+    const apiError =
+      apiRecord && typeof apiRecord.error === "object" && apiRecord.error !== null
+        ? (apiRecord.error as Record<string, unknown>)
+        : null;
     if (!apiRes.ok) {
-      console.error("Gemini HTTP Error:", apiData);
-      throw new Error(`Gemini API returned status ${apiRes.status}: ${apiData.error?.message || JSON.stringify(apiData)}`);
+      const apiDetail =
+        apiError && typeof apiError.message === "string" ? apiError.message : JSON.stringify(apiData);
+      console.error("Gemini HTTP Error:", apiDetail);
+      throw new Error(`Gemini API returned status ${apiRes.status}: ${apiDetail}`);
     }
 
     // Extract text (defensive)
-    const responseText = apiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!responseText || typeof responseText !== "string" || !responseText.trim()) {
+    const candidates = apiRecord && Array.isArray(apiRecord.candidates) ? apiRecord.candidates : [];
+    const firstCandidate = candidates[0];
+    const candidateRecord =
+      firstCandidate && typeof firstCandidate === "object" ? (firstCandidate as Record<string, unknown>) : null;
+    const content =
+      candidateRecord && typeof candidateRecord.content === "object" && candidateRecord.content !== null
+        ? (candidateRecord.content as Record<string, unknown>)
+        : null;
+    const parts = content && Array.isArray(content.parts) ? content.parts : [];
+    const firstPart = parts[0];
+    const responseText =
+      firstPart && typeof firstPart === "object" && typeof (firstPart as Record<string, unknown>).text === "string"
+        ? ((firstPart as Record<string, unknown>).text as string)
+        : undefined;
+    if (!responseText || !responseText.trim()) {
       console.error("Gemini returned empty/unusable response:", apiData);
       return new Response(
         JSON.stringify({
@@ -196,23 +232,37 @@ Keep each "topics" entry short (1 line). Provide realistic sections and weeks_al
       );
     }
 
-    // Parse model JSON
-    let roadmapData: any;
+    // Parse model JSON — models occasionally wrap JSON in markdown fences even
+    // with responseMimeType set, so strip them before parsing.
+    let roadmapData: Record<string, unknown>;
     try {
-      roadmapData = JSON.parse(responseText.trim());
+      const cleaned = responseText
+        .trim()
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/, "")
+        .trim();
+      try {
+        roadmapData = JSON.parse(cleaned);
+      } catch {
+        // Last resort: grab the outermost {...} or [...] block.
+        const m = cleaned.match(/[[{][\s\S]*[\]}]/);
+        if (!m) throw new Error("No JSON object found in model output");
+        roadmapData = JSON.parse(m[0]);
+      }
     } catch (err) {
       console.error("Failed to parse Gemini JSON:", err, responseText);
       return new Response(
         JSON.stringify({
-          error: "Failed to parse JSON returned by model.",
-          gemini_text: responseText,
+          error: "The AI returned malformed data. Please try generating again.",
         }),
-        { status: 500, headers: CORS_HEADERS }
+        { status: 502, headers: CORS_HEADERS }
       );
     }
 
     // Validate minimal shape
-    const sections = Array.isArray(roadmapData.sections) ? roadmapData.sections : [];
+    const sections: RoadmapSection[] = Array.isArray(roadmapData.sections)
+      ? (roadmapData.sections as RoadmapSection[])
+      : [];
     if (!sections.length) {
       console.warn("Model did not return sections; synthesizing simple sections.");
       roadmapData = {
@@ -235,7 +285,7 @@ Keep each "topics" entry short (1 line). Provide realistic sections and weeks_al
     const playlists = await fetchYouTubePlaylists(topic, Math.min(12, weeksBase.length * 2));
 
     // Distribute repos/playlists across weeks
-    const enrichedWeeks: any[] = weeksBase.map((w, idx) => {
+    const enrichedWeeks = weeksBase.map((w, idx) => {
       // choose up to 3 repos, cycling through topRepos
       const reposAssigned: string[] = [];
       for (let k = 0; k < 3 && topRepos.length; k++) {
@@ -277,9 +327,10 @@ Keep each "topics" entry short (1 line). Provide realistic sections and weeks_al
     };
 
     return new Response(JSON.stringify(out), { status: 200, headers: CORS_HEADERS });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Edge function error:", error);
-    return new Response(JSON.stringify({ error: `Failed to generate roadmap: ${String(error?.message || error)}` }), {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({ error: `Failed to generate roadmap: ${message}` }), {
       status: 500,
       headers: CORS_HEADERS,
     });

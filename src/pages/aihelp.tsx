@@ -11,17 +11,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ShootingStars } from "@/components/ui/shooting-stars";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 import { ArrowLeft, Loader2, Sparkles, Code2 } from "lucide-react";
 
 const fadeUp = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as
+/**
+ * The Gemini API key should live server-side as a Supabase Edge Function secret
+ * (GEMINI_API_KEY), used by the `gemini-explainer` function.
+ *
+ * VITE_GEMINI_API_KEY is an optional LOCAL-DEV fallback only: anything prefixed
+ * VITE_ is embedded in the browser bundle and visible to every visitor, so it
+ * must stay unset in production. When unset, requests go through the edge
+ * function and the key never reaches the client.
+ */
+const CLIENT_GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY as
   | string
   | undefined;
-const GEMINI_MODEL =
+const CLIENT_GEMINI_MODEL =
   (import.meta.env.VITE_GEMINI_MODEL as string | undefined) ||
-  "models/gemini-2.0-flash";
+  "models/gemini-2.5-flash";
 
 type NavState = {
   topic?: string;
@@ -129,26 +139,6 @@ const AiHelp = () => {
   }, [navState, searchParams]);
 
   const handleAsk = async () => {
-    if (!GEMINI_API_KEY) {
-      toast({
-        title: "Gemini not configured",
-        description:
-          "VITE_GEMINI_API_KEY is missing. Add it in .env.local and restart.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!GEMINI_MODEL) {
-      toast({
-        title: "Gemini model missing",
-        description:
-          "VITE_GEMINI_MODEL is missing. Example: models/gemini-2.0-flash",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!question.trim() && !roadmapContext.trim()) {
       toast({
         title: "Nothing to explain",
@@ -162,7 +152,10 @@ const AiHelp = () => {
     setIsLoading(true);
     setAnswer(null);
 
-    try {
+    const askDirectly = async (): Promise<string> => {
+      // LOCAL DEV ONLY — see comment at CLIENT_GEMINI_KEY above.
+      if (!CLIENT_GEMINI_KEY) throw new Error("no-client-key");
+
       const prompt = buildPrompt(
         topic || "Not provided",
         week || "Not provided",
@@ -171,13 +164,13 @@ const AiHelp = () => {
         question || "Explain this simply and tell me what to do next."
       );
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/${CLIENT_GEMINI_MODEL}:generateContent`;
 
       const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-goog-api-key": GEMINI_API_KEY,
+          "X-goog-api-key": CLIENT_GEMINI_KEY,
         },
         body: JSON.stringify({
           contents: [
@@ -191,10 +184,12 @@ const AiHelp = () => {
       if (!res.ok) {
         let errMsg = "Gemini API error";
         try {
-          const errJson = await res.json();
+          const errJson: unknown = await res.json();
+          const errRecord = errJson && typeof errJson === "object" ? (errJson as Record<string, unknown>) : null;
+          const errDetail = errRecord && typeof errRecord.error === "object" ? (errRecord.error as Record<string, unknown>) : null;
           errMsg =
-            errJson?.error?.message ||
-            errJson?.error?.status ||
+            (errDetail && typeof errDetail.message === "string" && errDetail.message) ||
+            (errDetail && typeof errDetail.status === "string" && errDetail.status) ||
             JSON.stringify(errJson);
         } catch {
           const errText = await res.text();
@@ -203,13 +198,86 @@ const AiHelp = () => {
         throw new Error(errMsg);
       }
 
-      const data = await res.json();
-
+      const data: unknown = await res.json();
+      const dataRecord = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+      const candidates = dataRecord && Array.isArray(dataRecord.candidates) ? dataRecord.candidates : [];
+      const firstCandidate = candidates[0];
+      const candidateRecord = firstCandidate && typeof firstCandidate === "object" ? (firstCandidate as Record<string, unknown>) : null;
+      const content = candidateRecord && typeof candidateRecord.content === "object" ? (candidateRecord.content as Record<string, unknown> | null) : null;
+      const parts = content && Array.isArray(content.parts) ? content.parts : [];
       const text =
-        data?.candidates?.[0]?.content?.parts
-          ?.map((p: any) => p.text || "")
+        parts
+          .map((p) => (p && typeof p === "object" && typeof (p as Record<string, unknown>).text === "string" ? (p as Record<string, unknown>).text as string : ""))
           .join("\n")
           .trim() || "No explanation received.";
+      return text;
+    };
+
+    // Sentinel tag so the caller can distinguish "edge function not deployed"
+    // from other failures (supabase-js masks the 404 body with a generic
+    // message, so we attach the status ourselves).
+    const EDGE_NOT_DEPLOYED = "EDGE_FUNCTION_NOT_DEPLOYED";
+
+    const askViaEdgeFunction = async (): Promise<string> => {
+      const { data, error } = await supabase.functions.invoke("gemini-explainer", {
+        body: { topic, week, weekTitle, roadmapContext, question },
+      });
+      if (error) {
+        if (error.name === "FunctionsHttpError") {
+          // FunctionsHttpError carries the raw Response on `context` — extract
+          // the server's JSON error message instead of showing the generic
+          // "Edge Function returned a non-2xx status code".
+          const ctx = (error as { context?: unknown }).context;
+          const status = ctx && typeof ctx === "object" ? (ctx as Response).status : undefined;
+          if (status === 404) {
+            throw new Error(EDGE_NOT_DEPLOYED);
+          }
+          if (ctx && typeof (ctx as Response).json === "function") {
+            const errBody = await (ctx as Response).json().catch(() => null);
+            const errMessage = errBody && typeof errBody === "object" && typeof (errBody as Record<string, unknown>).error === "string"
+              ? (errBody as Record<string, unknown>).error as string
+              : null;
+            throw new Error(errMessage || `AI service error (${status}).`);
+          }
+        }
+        // FunctionsRelayError / FunctionsFetchError: when the function is not
+        // deployed at all, the CORS preflight fails and supabase-js surfaces a
+        // network-level error BEFORE any HTTP status exists. Treat the known
+        // messages as "not deployed" so the local-dev fallback can engage.
+        if (
+          /Failed to send a request to the Edge Function|Failed to fetch|fetch failed/i.test(
+            error.message || ""
+          )
+        ) {
+          throw new Error(EDGE_NOT_DEPLOYED);
+        }
+        throw new Error(error.message || "AI service request failed.");
+      }
+      const answer = (data as { answer?: unknown })?.answer;
+      if (typeof answer !== "string" || !answer.trim()) {
+        throw new Error("The AI returned an empty response. Please try again.");
+      }
+      return answer;
+    };
+
+    try {
+      // Prefer the server-side proxy so the API key never reaches the browser.
+      let text: string;
+      try {
+        text = await askViaEdgeFunction();
+      } catch (edgeErr) {
+        // Fall back to the direct client call only when the edge function is
+        // not deployed AND a local dev key is present (local dev convenience).
+        const notDeployed = edgeErr instanceof Error && edgeErr.message === EDGE_NOT_DEPLOYED;
+        if (!notDeployed) throw edgeErr;
+        if (!CLIENT_GEMINI_KEY) {
+          throw new Error(
+            "The AI mentor service is not deployed yet, and no local Gemini key is configured. " +
+            "Deploy the gemini-explainer edge function, or set VITE_GEMINI_API_KEY in .env for local development."
+          );
+        }
+        text = await askDirectly();
+      }
 
       setAnswer(text);
 
@@ -217,19 +285,12 @@ const AiHelp = () => {
         title: "Explanation ready",
         description: "Scroll down to read your custom explanation.",
       });
-    } catch (err: any) {
-      setAnswer(
-        `Could not get explanation.\n\n${typeof err?.message === "string"
-          ? err.message
-          : "Check DevTools for details."
-        }`
-      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Check DevTools for details.";
+      setAnswer(`Could not get explanation.\n\n${message}`);
       toast({
         title: "Could not get explanation",
-        description:
-          typeof err?.message === "string"
-            ? err.message
-            : "See console for details.",
+        description: message,
         variant: "destructive",
       });
     } finally {

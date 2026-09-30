@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type KeyboardEvent } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,19 @@ import { ArrowLeft, Sparkles, Loader2, ChevronDown, ChevronUp, Users, Mail } fro
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getCachedRoadmap, saveRoadmapToCache } from "@/lib/roadmapCache";
+import { extractRoadmapText } from "@/lib/roadmapParser";
+import { getEdgeErrorMessage } from "@/lib/edgeErrors";
 
-const dummyPeers = [
+type Peer = {
+  id: number;
+  name: string;
+  city: string;
+  email: string;
+  lastActive: string;
+  topic: string;
+};
+
+const dummyPeers: Peer[] = [
   { id: 1, name: "Priya Sharma", city: "Mumbai", email: "priya.sharma@email.com", lastActive: "5 days ago", topic: "machine learning" },
   { id: 2, name: "Rohan Mehta", city: "Delhi", email: "rohan.mehta@email.com", lastActive: "2 days ago", topic: "data science" },
   { id: 3, name: "Ananya Verma", city: "Bangalore", email: "ananya.verma@email.com", lastActive: "1 day ago", topic: "machine learning" },
@@ -63,62 +74,84 @@ const CURATED_BASIC: Record<string, { shortDescription: string; subtopics: strin
   },
 };
 
-const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
+type RawTopic = Record<string, unknown>;
+
+const asSubtopicArray = (v: unknown): string[] =>
+  Array.isArray(v)
+    ? v.map(String)
+    : typeof v === "string"
+      ? v.split("\n").map((s) => s.trim()).filter(Boolean)
+      : [];
+
+const parseTopics = (maybeTextOrJson: unknown): TopicItem[] => {
   if (!maybeTextOrJson) return [];
 
   if (typeof maybeTextOrJson === "object") {
-    if (Array.isArray(maybeTextOrJson.topics)) {
-      return maybeTextOrJson.topics.map((t: any, idx: number) => ({
-        id: `${Date.now()}-${idx}`,
-        title: normalizeString(t.title) || normalizeString(t.topic) || `Topic ${idx + 1}`,
-        shortDescription: normalizeString(t.description) || normalizeString(t.shortDescription) || "",
-        subtopics: Array.isArray(t.subtopics) ? t.subtopics.map(String) : (typeof t.subtopics === "string" ? t.subtopics.split("\n").map((s: string) => s.trim()).filter(Boolean) : []),
-        completed: !!t.completed,
-        projectLink: t.projectLink ?? "",
-      }));
-    }
+    const record = maybeTextOrJson as Record<string, unknown>;
 
-    if (Array.isArray(maybeTextOrJson.weeks)) {
-      return maybeTextOrJson.weeks.map((w: any, idx: number) => ({
-        id: `${Date.now()}-${idx}`,
-        title: normalizeString(w.title) || `Week ${w.week ?? idx + 1}`,
-        shortDescription: (Array.isArray(w.details) ? w.details.join(" · ") : normalizeString(w.details)) || "",
-        subtopics: Array.isArray(w.subtopics) ? w.subtopics.map(String) : [],
-        completed: !!w.completed,
-        projectLink: w.projectLink ?? "",
-      }));
-    }
-
-    if (Array.isArray(maybeTextOrJson)) {
-      return maybeTextOrJson.map((it: any, idx: number) => {
-        if (typeof it === "string") {
-          const m = it.split(/[-:—]/).map((s) => s.trim());
-          const title = m[0] || `Topic ${idx + 1}`;
-          const desc = m.slice(1).join(" - ") || "";
-          return { id: `${Date.now()}-${idx}`, title, shortDescription: desc, subtopics: [], completed: false, projectLink: "" };
-        }
+    if (Array.isArray(record.topics)) {
+      return record.topics.map((rawT: unknown, idx: number) => {
+        const t = (rawT && typeof rawT === "object" ? rawT : {}) as RawTopic;
         return {
           id: `${Date.now()}-${idx}`,
-          title: normalizeString(it.title) || normalizeString(it.topic) || `Topic ${idx + 1}`,
-          shortDescription: normalizeString(it.description) || "",
-          subtopics: Array.isArray(it.subtopics) ? it.subtopics.map(String) : [],
-          completed: !!it.completed,
-          projectLink: it.projectLink ?? "",
+          title: normalizeString(t.title as string) || normalizeString(t.topic as string) || `Topic ${idx + 1}`,
+          shortDescription: normalizeString(t.description as string) || normalizeString(t.shortDescription as string) || "",
+          subtopics: asSubtopicArray(t.subtopics),
+          completed: !!t.completed,
+          projectLink: typeof t.projectLink === "string" ? t.projectLink : "",
         };
       });
     }
 
-    const maybeStr = String(maybeTextOrJson.content ?? maybeTextOrJson.text ?? JSON.stringify(maybeTextOrJson));
+    if (Array.isArray(record.weeks)) {
+      return record.weeks.map((rawW: unknown, idx: number) => {
+        const w = (rawW && typeof rawW === "object" ? rawW : {}) as RawTopic;
+        return {
+          id: `${Date.now()}-${idx}`,
+          title: normalizeString(w.title as string) || `Week ${(w.week as string | number) ?? idx + 1}`,
+          shortDescription: (Array.isArray(w.details) ? w.details.join(" · ") : normalizeString(w.details as string)) || "",
+          subtopics: asSubtopicArray(w.subtopics),
+          completed: !!w.completed,
+          projectLink: typeof w.projectLink === "string" ? w.projectLink : "",
+        };
+      });
+    }
+
+    if (Array.isArray(maybeTextOrJson)) {
+      return maybeTextOrJson.map((rawIt: unknown, idx: number) => {
+        if (typeof rawIt === "string") {
+          // Note: put the em-dash first in this character class. A hyphen-first
+          // order would be picked up by Tailwind's source scanner (even inside
+          // comments) as an arbitrary CSS class and emit broken CSS.
+          const m = rawIt.split(/[—:-]/).map((s) => s.trim());
+          const title = m[0] || `Topic ${idx + 1}`;
+          const desc = m.slice(1).join(" - ") || "";
+          return { id: `${Date.now()}-${idx}`, title, shortDescription: desc, subtopics: [], completed: false, projectLink: "" };
+        }
+        const it = (rawIt && typeof rawIt === "object" ? rawIt : {}) as RawTopic;
+        return {
+          id: `${Date.now()}-${idx}`,
+          title: normalizeString(it.title as string) || normalizeString(it.topic as string) || `Topic ${idx + 1}`,
+          shortDescription: normalizeString(it.description as string) || "",
+          subtopics: asSubtopicArray(it.subtopics),
+          completed: !!it.completed,
+          projectLink: typeof it.projectLink === "string" ? it.projectLink : "",
+        };
+      });
+    }
+
+    const maybeStr = String(record.content ?? record.text ?? JSON.stringify(maybeTextOrJson));
     return parseTopics(maybeStr);
   }
 
   const text = String(maybeTextOrJson).trim();
 
-  if (/^[\[{]/.test(text) || /"topics"\s*:/.test(text)) {
+  if (/^[[{]/.test(text) || /"topics"\s*:/.test(text)) {
     try {
       const parsed = JSON.parse(text);
       return parseTopics(parsed);
     } catch {
+      // Not valid JSON — continue with plain-text parsing below.
     }
   }
 
@@ -127,7 +160,7 @@ const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const m = line.match(/^(?:\d+\.\s*)?([A-Za-z0-9 &+.#-]{2,60})\s*[:\-—]\s*(.+)$/);
+    const m = line.match(/^(?:\d+\.\s*)?([A-Za-z0-9 &+.#-]{2,60})\s*[—:-]\s*(.+)$/);
     if (m) {
       items.push({
         id: `${Date.now()}-${i}`,
@@ -140,12 +173,12 @@ const parseTopics = (maybeTextOrJson: any): TopicItem[] => {
       continue;
     }
 
-    if (i + 1 < lines.length && lines[i + 1].match(/^[\-\*\•]\s+/)) {
+    if (i + 1 < lines.length && lines[i + 1].match(/^[-*•]\s+/)) {
       const title = line;
       const descBullets: string[] = [];
       let j = i + 1;
-      while (j < lines.length && lines[j].match(/^[\-\*\•]\s+/)) {
-        descBullets.push(lines[j].replace(/^[\-\*\•]\s+/, "").trim());
+      while (j < lines.length && lines[j].match(/^[-*•]\s+/)) {
+        descBullets.push(lines[j].replace(/^[-*•]\s+/, "").trim());
         j++;
       }
       items.push({
@@ -206,7 +239,7 @@ const RoadmapGenerator = () => {
   const [parsedTopics, setParsedTopics] = useState<TopicItem[]>([]);
   const [progress, setProgress] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const [matchedPeers, setMatchedPeers] = useState<any[]>([]);
+  const [matchedPeers, setMatchedPeers] = useState<Peer[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -216,9 +249,16 @@ const RoadmapGenerator = () => {
     }
 
     const search = normalizeTopicInput(topic);
+    const searchWords = search.split(/\s+/).filter(Boolean);
     const peers = dummyPeers.filter((peer) => {
       const peerTopic = (peer.topic || "").toLowerCase();
-      return peerTopic.includes(search) || search.includes(peerTopic) || peerTopic.split(" ").some((w: string) => search.includes(w));
+      const peerWords = peerTopic.split(/\s+/);
+      // Word-boundary matching so "ml" doesn't match "html".
+      return (
+        peerWords.includes(search) ||
+        searchWords.some((w) => peerWords.includes(w)) ||
+        searchWords.some((w) => peerTopic.split(" ").some((pw) => pw.startsWith(w) && w.length > 2))
+      );
     });
     setMatchedPeers(peers);
   }, [topic]);
@@ -227,7 +267,9 @@ const RoadmapGenerator = () => {
     try {
       const saved = JSON.parse(localStorage.getItem("basicRoadmapProgress") || "null");
       if (Array.isArray(saved)) setParsedTopics(saved);
-    } catch { }
+    } catch {
+      // Corrupted persisted progress — start fresh.
+    }
   }, []);
 
   useEffect(() => {
@@ -253,7 +295,7 @@ const RoadmapGenerator = () => {
     try {
       const cached = await getCachedRoadmap(topic, false);
       if (cached) {
-        let items = parseTopics(cached);
+        const items = parseTopics(cached);
         if (items.length > 0) {
           const enriched = enrichParsedTopics(topic || currentKnowledge || "", items);
           setParsedTopics(enriched);
@@ -263,60 +305,18 @@ const RoadmapGenerator = () => {
         }
       }
 
+      toast({
+        title: "Generating your roadmap",
+        description: "The AI is researching topics, repos and playlists — this takes 10–30 seconds.",
+      });
+
       const { data, error } = await supabase.functions.invoke("generate-roadmap", {
         body: { topic, currentKnowledge, premium: false },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await getEdgeErrorMessage(error));
 
-      let maybe: any = data;
-
-      if (typeof maybe === "string") {
-        try {
-          maybe = JSON.parse(maybe);
-        } catch {
-        }
-      }
-
-      const candidates = [
-        maybe?.topics,
-        maybe?.roadmap,
-        maybe?.result,
-        maybe?.text,
-        maybe?.data,
-        maybe?.content,
-        maybe,
-      ];
-
-      let chosen: any = undefined;
-      for (const c of candidates) {
-        if (!c && c !== "") continue;
-        if (typeof c === "string" && c.trim().length > 0) {
-          chosen = c;
-          break;
-        }
-        if (typeof c === "object") {
-          if (Array.isArray(c.topics) || Array.isArray(c.weeks) || Array.isArray(c)) {
-            chosen = c;
-            break;
-          }
-          if (c.content || c.text || c.choices) {
-            chosen = c;
-            break;
-          }
-          try {
-            const len = JSON.stringify(c).length;
-            if (len > 40) {
-              chosen = c;
-              break;
-            }
-          } catch { }
-        }
-      }
-
-      if (!chosen && maybe) {
-        chosen = typeof maybe === "string" ? maybe : JSON.stringify(maybe);
-      }
+      const chosen = extractRoadmapText(data);
 
       if (!chosen) {
         throw new Error("No usable roadmap returned by backend.");
@@ -324,7 +324,7 @@ const RoadmapGenerator = () => {
 
       let items = parseTopics(chosen);
       if (!items || items.length === 0) {
-        const parts = (topic || "").split(/[,|\/&]/).map((p) => p.trim()).filter(Boolean);
+        const parts = (topic || "").split(/[,|/&]/).map((p) => p.trim()).filter(Boolean);
         items = parts.length ? parts.map((p, i) => ({ id: `${Date.now()}-${i}`, title: p, shortDescription: "", subtopics: [], completed: false, projectLink: "" })) : [{ id: `${Date.now()}-0`, title: topic, shortDescription: "", subtopics: [], completed: false, projectLink: "" }];
       }
 
@@ -334,9 +334,13 @@ const RoadmapGenerator = () => {
       await saveRoadmapToCache(topic, false, enriched);
 
       toast({ title: "Roadmap ready", description: "Basic topics generated — see below." });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error generating basic roadmap:", err);
-      toast({ title: "Error", description: (err && err.message) ? err.message : "Failed to generate roadmap", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to generate roadmap",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -350,7 +354,7 @@ const RoadmapGenerator = () => {
     setParsedTopics((prev) => prev.map((t, i) => (i === index ? { ...t, projectLink: value } : t)));
   };
 
-  const handleKeyPress = (e: any) => {
+  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !isLoading) {
       e.preventDefault();
       handleGenerate();

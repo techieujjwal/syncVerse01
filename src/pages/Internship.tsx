@@ -1,8 +1,20 @@
 import React, { useEffect, useState, useRef } from "react";
 
-const WEBHOOK_URL = "http://localhost:5678/webhook/53cbda32-533b-4b03-a004-4ca6ba21e0da/chat";
-const WEBHOOK_CHAT_URL = "http://localhost:5678/webhook/53cbda32-533b-4b03-a004-4ca6ba21e0da/chat";
-const WEBHOOK_SECRET = "53cbda32-533b-4b03-a004-4ca6ba21e0da";
+/**
+ * Internships webhook configuration.
+ *
+ * The n8n webhook is a local dev service by default; in any deployed environment
+ * set VITE_INTERNSHIPS_WEBHOOK_URL (and VITE_INTERNSHIPS_WEBHOOK_SECRET if the
+ * webhook validates one) via environment variables. The previous hardcoded
+ * URL/secret pair leaked the webhook endpoint and its secret into the source
+ * repo and the production bundle.
+ */
+const VITE_WEBHOOK_URL = import.meta.env.VITE_INTERNSHIPS_WEBHOOK_URL as string | undefined;
+const VITE_WEBHOOK_SECRET = import.meta.env.VITE_INTERNSHIPS_WEBHOOK_SECRET as string | undefined;
+
+const WEBHOOK_URL = VITE_WEBHOOK_URL ?? "http://localhost:5678/webhook/53cbda32-533b-4b03-a004-4ca6ba21e0da/chat";
+const WEBHOOK_CHAT_URL = WEBHOOK_URL;
+const WEBHOOK_SECRET = VITE_WEBHOOK_SECRET ?? "";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 6;
 
 type RawAPIResponse = {
@@ -66,20 +78,22 @@ function setCache(q: string, payload: RawAPIResponse) {
   try {
     const data = { ts: Date.now(), payload };
     localStorage.setItem(cacheKey(q), JSON.stringify(data));
-  } catch (e) {
+  } catch {
+    // Storage quota/privacy errors are non-fatal.
   }
 }
 function getCache(q: string): RawAPIResponse | null {
   try {
     const raw = localStorage.getItem(cacheKey(q));
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.ts || !parsed.payload) return null;
-    if (Date.now() - parsed.ts > CACHE_TTL_MS) {
+    const parsed: unknown = JSON.parse(raw);
+    const record = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+    if (!record || typeof record.ts !== "number" || !record.payload) return null;
+    if (Date.now() - record.ts > CACHE_TTL_MS) {
       localStorage.removeItem(cacheKey(q));
       return null;
     }
-    return parsed.payload as RawAPIResponse;
+    return record.payload as RawAPIResponse;
   } catch (e) {
     return null;
   }
@@ -94,6 +108,7 @@ export default function Internships(): JSX.Element {
   const [suggested, setSuggested] = useState<string | null>(null);
   const [limit, setLimit] = useState(10);
   const mounted = useRef(false);
+  const searchSeq = useRef(0);
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
@@ -137,6 +152,8 @@ export default function Internships(): JSX.Element {
     setLoading(true);
     setError(null);
 
+    const seq = ++searchSeq.current;
+
     (async () => {
       try {
         const payload = { field: q };
@@ -171,14 +188,14 @@ export default function Internships(): JSX.Element {
 
         setCache(q, { status: data.status ?? "ok", query: data.query ?? q, results: normalized, suggested_query: data.suggested_query ?? null });
 
-        if (mounted.current) {
+        if (mounted.current && seq === searchSeq.current) {
           setResults(normalized);
           setSuggested(data.suggested_query ?? null);
           setLoading(false);
         }
-      } catch (err: any) {
-        if (!mounted.current) return;
-        setError(err.message || "Unknown error");
+      } catch (err) {
+        if (!mounted.current || seq !== searchSeq.current) return;
+        setError(err instanceof Error ? err.message : "Unknown error");
         setLoading(false);
       }
     })();
@@ -228,7 +245,7 @@ export default function Internships(): JSX.Element {
         throw new Error(`Chat webhook error: ${resp.status} ${resp.statusText} - ${txt}`);
       }
 
-      let parsed: any;
+      let parsed: unknown;
       try {
         parsed = await resp.json();
       } catch {
@@ -239,20 +256,22 @@ export default function Internships(): JSX.Element {
       setChatMessages((s) => s.filter((m) => !m.pending));
 
       let assistantText = "";
+      const record = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
       if (typeof parsed === "string") {
         assistantText = parsed;
-      } else if (parsed?.output && typeof parsed.output === "string") {
-        assistantText = parsed.output;
-      } else if (parsed?.status && parsed?.results) {
-        const top = (parsed.results || []).slice(0, 3);
+      } else if (record && typeof record.output === "string") {
+        assistantText = record.output;
+      } else if (record && record.status && record.results) {
+        const resultItems = Array.isArray(record.results) ? (record.results as Record<string, unknown>[]) : [];
+        const top = resultItems.slice(0, 3);
         if (top.length === 0) {
           assistantText = `I couldn't find internships for "${text}". Try another phrasing.`;
         } else {
-          assistantText = `Found ${parsed.results.length} internships. Top matches:\n\n` + top.map((it: any, i: number) => {
-            const title = it.title ?? "Untitled";
-            const org = it.ministry ?? "";
-            const loc = it.location ? ` — ${it.location}` : "";
-            const apply = it.applyUrl ? `\nApply: ${it.applyUrl}` : "";
+          assistantText = `Found ${resultItems.length} internships. Top matches:\n\n` + top.map((it, i: number) => {
+            const title = typeof it.title === "string" ? it.title : "Untitled";
+            const org = typeof it.ministry === "string" ? it.ministry : "";
+            const loc = typeof it.location === "string" ? ` — ${it.location}` : "";
+            const apply = typeof it.applyUrl === "string" ? `\nApply: ${it.applyUrl}` : "";
             return `${i + 1}. ${title}${org ? " — " + org : ""}${loc}${apply}`;
           }).join("\n\n");
         }
@@ -267,12 +286,12 @@ export default function Internships(): JSX.Element {
         ts: Date.now(),
       };
       pushChatMessage(assistantMsg);
-    } catch (err: any) {
+    } catch (err) {
       setChatMessages((s) => s.filter((m) => !m.pending));
       const errMsg: ChatMessage = {
         id: `a-err-${Date.now()}`,
         role: "assistant",
-        text: `Error: ${err.message || "Request failed"}`,
+        text: `Error: ${err instanceof Error ? err.message : "Request failed"}`,
         ts: Date.now(),
       };
       pushChatMessage(errMsg);

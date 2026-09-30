@@ -54,8 +54,13 @@ export const ShootingStars: React.FC<ShootingStarsProps> = ({
 }) => {
   const [star, setStar] = useState<ShootingStar | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const reschedulingRef = useRef(true);
 
   useEffect(() => {
+    // Track the pending timeout so the star-spawner stops when unmounted
+    // (previously it kept firing forever, leaking timers across navigation).
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+
     const createStar = () => {
       const { x, y, angle } = getRandomStartPoint();
       const newStar: ShootingStar = {
@@ -64,18 +69,24 @@ export const ShootingStars: React.FC<ShootingStarsProps> = ({
         y,
         angle,
         scale: 1,
-        speed: Math.random() * (maxSpeed - minSpeed) + minSpeed,
+        speed: reschedulingRef.current ? Math.random() * (maxSpeed - minSpeed) + minSpeed : 1,
         distance: 0,
       };
       setStar(newStar);
 
       const randomDelay = Math.random() * (maxDelay - minDelay) + minDelay;
-      setTimeout(createStar, randomDelay);
+      timerId = setTimeout(() => {
+        if (reschedulingRef.current) createStar();
+      }, randomDelay);
     };
 
+    reschedulingRef.current = true;
     createStar();
 
-    return () => {};
+    return () => {
+      reschedulingRef.current = false;
+      if (timerId !== null) clearTimeout(timerId);
+    };
   }, [minSpeed, maxSpeed, minDelay, maxDelay]);
 
   useEffect(() => {

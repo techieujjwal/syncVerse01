@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Week } from "@/lib/roadmapParser";
 
 function normalizeKey(topic: string): string {
     return topic.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-export async function getCachedRoadmap(topic: string, premium: boolean): Promise<any | null> {
+export async function getCachedRoadmap(topic: string, premium: boolean): Promise<unknown | null> {
     const key = normalizeKey(topic);
     try {
         const { data, error } = await supabase
@@ -26,7 +27,7 @@ export async function getCachedRoadmap(topic: string, premium: boolean): Promise
 export async function saveRoadmapToCache(
     topic: string,
     premium: boolean,
-    content: any
+    content: unknown
 ): Promise<void> {
     const key = normalizeKey(topic);
     try {
@@ -40,5 +41,7 @@ export async function saveRoadmapToCache(
             { onConflict: "topic_key,is_premium" }
         );
     } catch {
+        // Cache write failures are non-fatal; the roadmap still renders from
+        // the in-memory response.
     }
 }
