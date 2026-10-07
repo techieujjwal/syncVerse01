@@ -377,7 +377,7 @@ const Premium = () => {
 
               <motion.h1 variants={fadeUp} className="text-3xl md:text-4xl font-bold mb-3">
                 The version of SyncVerse that feels{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00E5FF] to-[#A855F7]">alive and learning with you.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ffffff] to-[#ffffff]">alive and learning with you.</span>
               </motion.h1>
 
               <motion.p variants={fadeUp} className="text-white/70 max-w-3xl mb-6">

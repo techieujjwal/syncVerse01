@@ -266,7 +266,7 @@ const Index = () => {
                   {authUser ? (
                     <>
                       Welcome back,{" "}
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-500">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-white 150 to-black-500">
                         {displayName}
                       </span>
                     </>
@@ -299,7 +299,7 @@ const Index = () => {
                   </Link>
 
                   <Link to="/experts">
-                    <Button size="lg" variant="outline" className="px-7 py-3 border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/50 rounded-xl transition-all duration-300">
+                    <Button size="lg" variant="outline" className="px-7 py-3 border-white-500/30 text-rose-400 hover:bg-blue-500/10 hover:border-black-500/50 rounded-xl transition-all duration-300">
                       An Expert?
                     </Button>
                   </Link>

@@ -495,7 +495,7 @@ export default function Roadmaps(): JSX.Element {
             ← Back to Home
           </Link>
           <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
-            Roadmap Hub — <span className="text-gradient">Deep Learning Paths</span>
+            Roadmap Hub — <span >Deep Learning Paths</span>
           </h1>
           <p className="text-white/40 mb-6 max-w-2xl">
             Choose a structured 5–6 month learning path — each guide gives a comprehensive month-by-month plan, projects, resources, and professional tips.
