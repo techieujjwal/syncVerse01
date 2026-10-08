@@ -314,7 +314,7 @@ export default function Internships(): JSX.Element {
     <>
       <div className="min-h-screen pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-3xl">
-          <h2 className="text-3xl font-bold mb-3 tracking-tight">Find Government <span className="text-gradient">Internships</span></h2>
+          <h2 className="text-3xl font-bold mb-3 tracking-tight">Find Government <span >Internships</span></h2>
           <p className="text-sm text-white/40 mb-6">Enter your field (e.g. "data science", "frontend", "renewable energy") and get matching government internship listings.</p>
 
           <div className="flex gap-2 mb-4">

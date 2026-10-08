@@ -581,7 +581,7 @@ export default function Programs(): JSX.Element {
             ← Back to Home
           </Link>
           <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
-            Opportunity Hub — <span className="text-gradient">Programs & Prep Guides</span>
+            Opportunity Hub — <span >Programs & Prep Guides</span>
           </h1>
           <p className="text-white/40 mb-6 max-w-2xl">
             Browse top global & regional programs (GSoC, Outreachy, MLH, LFX, Hacktoberfest, and more). Use search and tech filters — click "Apply Now" to visit the official page or "View Prep Guide" for a quick, structured prep plan.
@@ -601,7 +601,7 @@ export default function Programs(): JSX.Element {
             <div className="flex flex-wrap gap-2">
               <Badge
                 className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${selectedStacks.size === 0
-                  ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                  ? "bg-white-500/20 text-white-300 border-white-500/30"
                   : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
                   }`}
                 onClick={() => setSelectedStacks(new Set())}
@@ -612,7 +612,7 @@ export default function Programs(): JSX.Element {
                 <Badge
                   key={stack}
                   className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${selectedStacks.has(stack)
-                    ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                    ? "bg-white-500/20 text-white-300 border-white-500/30"
                     : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
                     }`}
                   onClick={() => toggleStack(stack)}

@@ -299,7 +299,7 @@ const Index = () => {
                   </Link>
 
                   <Link to="/experts">
-                    <Button size="lg" variant="outline" className="px-7 py-3 border-white-500/30 text-rose-400 hover:bg-blue-500/10 hover:border-black-500/50 rounded-xl transition-all duration-300">
+                    <Button size="lg" variant="outline" className="px-7 py-3 border-white-500/30 text-white-400 hover:bg-blue-500/10 hover:border-black-500/50 rounded-xl transition-all duration-300">
                       An Expert?
                     </Button>
                   </Link>
@@ -370,9 +370,9 @@ const Index = () => {
 
               <div className="grid md:grid-cols-3 gap-5">
                 {[
-                  { icon: <Code2 className="h-5 w-5 text-cyan-400" />, title: "Structured Roadmaps", desc: "Month-by-month learning paths for every stack.", details: "Curated resources, checkpoints, and mini-projects to keep you on track.", color: "from-cyan-500/20 to-cyan-500/5" },
-                  { icon: <Users className="h-5 w-5 text-violet-400" />, title: "Peer Learning", desc: "Study together, build together.", details: "Study groups, pair programming, and mentor office hours included.", color: "from-violet-500/20 to-violet-500/5" },
-                  { icon: <Rocket className="h-5 w-5 text-rose-400" />, title: "Top Internships", desc: "GSOC, MLH, and more.", details: "Placement kits, interview practice, and project reviews to help you land roles.", color: "from-rose-500/20 to-rose-500/5" },
+                  { icon: <Code2 className="h-5 w-5 text-white-400" />, title: "Structured Roadmaps", desc: "Month-by-month learning paths for every stack.", details: "Curated resources, checkpoints, and mini-projects to keep you on track.", color: "from-white-500/20 to-white-500/5" },
+                  { icon: <Users className="h-5 w-5 text-white-400" />, title: "Peer Learning", desc: "Study together, build together.", details: "Study groups, pair programming, and mentor office hours included.", color: "from-white-500/20 to-white-500/5" },
+                  { icon: <Rocket className="h-5 w-5 text-white-400" />, title: "Top Internships", desc: "GSOC, MLH, and more.", details: "Placement kits, interview practice, and project reviews to help you land roles.", color: "from-white-500/20 to-white-500/5" },
                 ].map((f, i) => (
                   <motion.div key={i} variants={fadeUp} className="group relative p-6 rounded-2xl glass hover:bg-white/[0.06] transition-all duration-500">
                     <div className={`absolute inset-0 rounded-2xl bg-gradient-to-b ${f.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />

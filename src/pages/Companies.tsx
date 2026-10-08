@@ -14,8 +14,7 @@ const companies = [
     githubUrl: "https://github.com/mozilla",
     techStacks: ["Rust", "JavaScript", "C++", "Python"],
     gsocYears: ["2024", "2023", "2022", "2021"],
-    projects: 15,
-    color: "from-orange-500/20 to-red-500/10",
+    projects: 15
   },
   {
     id: 2,
@@ -24,8 +23,8 @@ const companies = [
     githubUrl: "https://github.com/tensorflow",
     techStacks: ["Python", "C++", "JavaScript"],
     gsocYears: ["2024", "2023", "2022"],
-    projects: 12,
-    color: "from-amber-500/20 to-orange-500/10",
+    projects: 12
+    
   },
   {
     id: 3,
@@ -35,7 +34,6 @@ const companies = [
     techStacks: ["Go", "Python", "Shell"],
     gsocYears: ["2024", "2023", "2022", "2021"],
     projects: 20,
-    color: "from-blue-500/20 to-cyan-500/10",
   },
   {
     id: 4,
@@ -45,7 +43,7 @@ const companies = [
     techStacks: ["Java", "Python", "C++", "Scala"],
     gsocYears: ["2024", "2023", "2022", "2021", "2020"],
     projects: 50,
-    color: "from-red-500/20 to-rose-500/10",
+
   },
   {
     id: 5,
@@ -55,7 +53,6 @@ const companies = [
     techStacks: ["Python", "C"],
     gsocYears: ["2024", "2023", "2022", "2021"],
     projects: 18,
-    color: "from-yellow-500/20 to-blue-500/10",
   },
   {
     id: 6,
@@ -65,7 +62,6 @@ const companies = [
     techStacks: ["Go", "Rust", "JavaScript", "Python"],
     gsocYears: ["2024", "2023", "2022"],
     projects: 25,
-    color: "from-sky-500/20 to-blue-500/10",
   },
   {
     id: 7,
@@ -75,7 +71,6 @@ const companies = [
     techStacks: ["PHP", "JavaScript", "Python"],
     gsocYears: ["2024", "2023", "2022", "2021", "2020"],
     projects: 22,
-    color: "from-emerald-500/20 to-teal-500/10",
   },
   {
     id: 8,
@@ -85,7 +80,6 @@ const companies = [
     techStacks: ["C", "Shell", "Perl"],
     gsocYears: ["2024", "2023", "2022"],
     projects: 8,
-    color: "from-violet-500/20 to-purple-500/10",
   }
 ];
 
@@ -110,7 +104,7 @@ const Companies = () => {
             ← Back to Home
           </Link>
           <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
-            GSOC <span className="text-gradient">Organizations</span>
+            GSOC <span >Organizations</span>
           </h1>
           <p className="text-lg text-white/40 max-w-2xl mb-8">
             Explore organizations participating in GSOC. Filter by tech stack to find companies matching your skills.
@@ -130,7 +124,7 @@ const Companies = () => {
             <Badge
               variant={selectedStack === null ? "default" : "outline"}
               className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${selectedStack === null
-                  ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                  ? "bg-white-500/20 text-white-300 border-white-500/30"
                   : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
                 }`}
               onClick={() => setSelectedStack(null)}
@@ -142,7 +136,7 @@ const Companies = () => {
                 key={stack}
                 variant={selectedStack === stack ? "default" : "outline"}
                 className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${selectedStack === stack
-                    ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                    ? "bg-white-500/20 text-white-300 border-white-500/30"
                     : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
                   }`}
                 onClick={() => setSelectedStack(stack)}

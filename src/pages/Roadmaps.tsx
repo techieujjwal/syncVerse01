@@ -515,7 +515,7 @@ export default function Roadmaps(): JSX.Element {
             <div className="flex flex-wrap gap-2">
               <Badge
                 className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${stackFilter.size === 0
-                    ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                    ? "bg-white-500/20 text-white-300 border-white-500/30"
                     : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
                   }`}
                 onClick={() => setStackFilter(new Set())}
@@ -527,7 +527,7 @@ export default function Roadmaps(): JSX.Element {
                 <Badge
                   key={s}
                   className={`cursor-pointer px-3 py-1 rounded-lg transition-all ${stackFilter.has(s)
-                      ? "bg-violet-500/20 text-violet-300 border-violet-500/30"
+                      ? "bg-white-500/20 text-white-300 border-white-500/30"
                       : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.06]"
                     }`}
                   onClick={() => toggleStack(s)}
