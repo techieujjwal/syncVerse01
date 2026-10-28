@@ -143,13 +143,13 @@ function computeBadges(user: UserProfile, planSteps: ReturnType<typeof generateR
 const palette = {
   bg: "relative bg-black text-gray-100",
   card: "bg-white/[0.04] backdrop-blur-xl",
-  accent: "bg-gradient-to-r from-violet-600 via-pink-500 to-rose-500",
+  accent: "bg-gradient-to-r from-white-600 via-white-500 to-black-500",
   primaryText: "text-gray-100",
   subText: "text-white/40",
   border: "border-white/[0.08]",
   input: "bg-white/[0.04] border-white/10 text-gray-100",
   button: "bg-white/[0.06] hover:bg-white/[0.1]",
-  skillBar: "bg-gradient-to-r from-violet-500 to-pink-500",
+  skillBar: "bg-gradient-to-r from-yellow-500 to-yellow-500",
   progress: "bg-gradient-to-r from-cyan-400 to-teal-400",
 };
 
@@ -278,7 +278,7 @@ export default function Expert() {
               <Zap className="text-white" size={24} />
             </motion.div>
             <div>
-              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-yellow-400">
                 Career Catalyst
               </h1>
               <p className="text-sm text-gray-400">AI-powered career growth platform</p>
@@ -292,7 +292,7 @@ export default function Expert() {
               <div className="w-24 h-2 bg-gray-700 rounded-full mt-1 overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: "linear-gradient(90deg, #8b5cf6, #ec4899)" }}
+                  style={{ background: "linear-gradient(90deg, #f1f0f4, #fbf7f9)" }}
                   initial={{ width: 0 }}
                   animate={{ width: `${completionScore}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
@@ -303,7 +303,7 @@ export default function Expert() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setEditing((s) => (s === "form" ? "preview" : "form"))}
-              className="rounded-full px-6 py-3 shadow-lg transition flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+              className="rounded-full px-6 py-3 shadow-lg transition flex items-center gap-2 bg-gradient-to-r from-black-600 to-white-600 text-white"
             >
               {editing === "form" ? "Preview Plan" : "Edit Profile"}
               <ArrowRight className="-rotate-45" />
@@ -323,7 +323,7 @@ export default function Expert() {
                 {editing === "form" ? (
                   <motion.div key="form" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }}>
                     <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                      <Briefcase className="text-purple-400" />
+                      <Briefcase className="text-white-400" />
                       Tell us about you
                     </h2>
 
@@ -505,7 +505,7 @@ export default function Expert() {
                           }
                           setEditing("preview");
                         }}
-                        className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg font-medium"
+                        className="px-6 py-3 rounded-xl bg-gradient-to-r from-white-600 to-white-600 text-white shadow-lg font-medium"
                       >
                         Generate Roadmap
                       </motion.button>
@@ -766,7 +766,7 @@ export default function Expert() {
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setActiveTab(tab as "profile" | "roadmap" | "market")}
-                    className={`px-4 py-2 text-sm font-medium relative ${activeTab === tab ? "text-purple-400" : "text-gray-400"
+                    className={`px-4 py-2 text-sm font-medium relative ${activeTab === tab ? "text-black-400" : "text-gray-400"
                       }`}
                   >
                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -921,7 +921,7 @@ export default function Expert() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={exportPlan}
-                    className="p-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white flex flex-col items-center justify-center gap-1"
+                    className="p-3 rounded-lg bg-gradient-to-r from-black-600 to-w-600 text-white flex flex-col items-center justify-center gap-1"
                   >
                     <span>Download</span>
                     <span className="text-xs">Plan</span>
@@ -930,7 +930,7 @@ export default function Expert() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={copyPlanToClipboard}
-                    className="p-3 rounded-lg bg-gray-700 flex flex-col items-center justify-center gap-1"
+                    className="p-3 rounded-lg bg-gradient-to-r from-black-600 to-w-600 text-white flex flex-col items-center justify-center gap-1"
                   >
                     <span>Copy</span>
                     <span className="text-xs">JSON</span>
@@ -939,7 +939,7 @@ export default function Expert() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => alert('TODO: hook to job search API')}
-                    className="p-3 rounded-lg bg-gray-700 flex flex-col items-center justify-center gap-1"
+                    className="p-3 rounded-lg bg-gradient-to-r from-black-600 to-w-600 text-white flex flex-col items-center justify-center gap-1"
                   >
                     <span>Find</span>
                     <span className="text-xs">Jobs</span>
@@ -948,7 +948,7 @@ export default function Expert() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => alert('TODO: mentor integration')}
-                    className="p-3 rounded-lg bg-gray-700 flex flex-col items-center justify-center gap-1"
+                    className="p-3 rounded-lg bg-gradient-to-r from-black-600 to-w-600 text-white flex flex-col items-center justify-center gap-1"
                   >
                     <span>Find</span>
                     <span className="text-xs">Mentor</span>
@@ -956,54 +956,20 @@ export default function Expert() {
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-gray-700">
-                <h4 className="text-lg font-semibold mb-3">Next Steps</h4>
-                <ul className="text-sm text-gray-400 space-y-2">
-                  <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5"></div>
-                    <span>Replace mockMarketData() with real market API</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5"></div>
-                    <span>Integrate server-side ML model for accurate forecasts</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5"></div>
-                    <span>Add Stripe integration for premium mentor hours</span>
-                  </li>
-                </ul>
-              </div>
+              
             </motion.div>
 
             <motion.div
               layout
               className={`mt-6 rounded-2xl p-5 shadow-xl ${palette.card} border ${palette.border}`}
             >
-              <h4 className="font-bold mb-3 flex items-center gap-2">
-                <Star className="text-yellow-400" />
-                Demo Tips
-              </h4>
-              <ol className="text-sm text-gray-400 space-y-2">
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-xs">1</div>
-                  <span>Fill profile, add trending skills, generate roadmap</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-xs">2</div>
-                  <span>Simulate progress to unlock SuperBadges</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-xs">3</div>
-                  <span>Download JSON plan for backend integration</span>
-                </li>
-              </ol>
+              
+              
             </motion.div>
           </div>
         </div>
 
-        <footer className="mt-12 text-center text-xs text-gray-500">
-          Career Catalyst — Designed for demo. Replace mocks with real APIs for production.
-        </footer>
+        
       </div>
     </div>
   );
