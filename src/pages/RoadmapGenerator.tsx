@@ -369,7 +369,7 @@ const RoadmapGenerator = () => {
         </Link>
 
         <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-          AI-Powered <span className="text-gradient">Roadmap Tracker</span>
+          AI-Powered <span className="text-white-400">Roadmap Tracker</span>
         </h1>
         <p className="text-lg text-white/40 mb-6">Generate a concise list of topics to study.</p>
 
